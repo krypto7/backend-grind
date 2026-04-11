@@ -19,6 +19,6 @@ router.post(
   musicController.creatAlbum,
 );
 
-router.get("/", musicController.getAllMusic);
+router.get("/", authMiddleware.authUser, musicController.getAllMusic);
 
 module.exports = router;
