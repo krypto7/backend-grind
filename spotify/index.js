@@ -13,4 +13,4 @@ app.use(express.json());
 app.use("/api/auth", authRoute);
 app.use("/api/music", musicRoute);
 
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000);   
