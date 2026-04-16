@@ -1,9 +1,82 @@
 const express = require("express");
+const dbConnection = require("./db/dbConnection");
+// const jwt = require("jsonwebtoken");
+// const bcrypt = require("bcrypt");
+// const User = require("./model/user.model");
+const Todo = require("./model/todo.model");
+const cookieParser = require("cookie-parser");
+
+require("dotenv").config();
+
+dbConnection();
+
 const app = express();
-require("dotenv").require();
 
 app.use(express.json());
+app.use(cookieParser());
 
+//Todo-section:
 
+//create-todo:
+app.post("/add-todo", async (req, res) => {
+  const { title, desc, isCompleted } = req.body;
 
-app.listen(process.env.PORT);
+  if (!title || !desc) {
+    return res.status(400).json({
+      msg: "all fields are required",
+    });
+  }
+
+  const task = await Todo.create({
+    title,
+    desc,
+    isCompleted,
+  });
+
+  res.status(200).json({
+    msg: "Task added successfully,",
+    todo: task,
+  });
+});
+
+//update-todo:
+app.patch("/task/:id", async (req, res) => {
+  const id = req.params.id;
+  const { title, desc, isCompleted } = req.body;
+
+  const update = {};
+
+  if (title !== undefined) return;
+
+  const updatedTask = await Todo.findByIdAndUpdate(
+    id,
+    {
+      title,
+      desc,
+      isCompleted,
+    },
+    { new: true },
+  );
+
+  if (!updatedTask) {
+    return res.status(400).json({ msg: "Task not found" });
+  }
+
+  res.status(200).json({
+    msg: "task updated",
+    task: updatedTask,
+  });
+});
+
+//get all task:
+
+app.get("/tasks", async (req, res) => {
+  const tasks = await Todo.find();
+
+  res.status(200).json({
+    msg: "Task fetch successfully",
+    tasks,
+  });
+});
+
+app.listen(process.env.PORT || 8000);
