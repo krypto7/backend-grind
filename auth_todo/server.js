@@ -1,10 +1,10 @@
 const express = require("express");
 const dbConnection = require("./db/dbConnection");
-// const jwt = require("jsonwebtoken");
-// const bcrypt = require("bcrypt");
-// const User = require("./model/user.model");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const Todo = require("./model/todo.model");
 const cookieParser = require("cookie-parser");
+const User = require("./model/user.model");
 
 require("dotenv").config();
 
@@ -14,6 +14,43 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
+
+//singup:
+
+app.post("/signup",async(req,res)=>{
+  const {username,email,password} = req.body;
+  
+  if(!username || !email || !password){
+    return res.status(400).json({
+      msg:"all fields are required!!"
+    })
+  }
+
+  const userExist = await User.findOne({email});
+
+  if(userExist){
+    return res.status(400).json({
+      msg:"user already exists"
+    })
+  }
+
+  const hashPassword = await bcrypt.hash(password,10);
+
+  const user = await User.create({
+    username,
+    email,
+    password:hashPassword
+  })
+
+})
+
+
+//singin:
+
+app.post("/signin",(req,res)=>{
+
+})
 
 //Todo-section:
 
