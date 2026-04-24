@@ -43,12 +43,53 @@ app.post("/signup",async(req,res)=>{
     password:hashPassword
   })
 
+  const token = jwt.sign({userId:user._id,email:user.email},process.env.JWT_SECRET);
+
+  res.status(200).json({
+    msg:"user register successfully!",
+    token,
+    user:user
+  })
+
 })
 
 
 //singin:
 
-app.post("/signin",(req,res)=>{
+app.post("/singin",async(req,res)=>{
+  const {email,password} = req.body;
+  
+  if(!email || !password){
+    return res.status(400).json({
+      msg:"all fields are required!!"
+    })
+  }
+
+  const userExist = await User.findOne({email});
+
+  if(!userExist){
+    return res.status(400).json({
+      msg:"user not found!!"
+    })
+  }
+
+  const isMatch = await bcrypt.compare(password,userExist.password);
+
+  if(!isMatch){
+    return res.status(400).json({msg:"invalid credintial"});
+  }
+
+    const token = jwt.sign(
+      { userId: userExist._id, email: userExist.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" },
+    );
+
+  res.status(200).json({
+    msg:"user loggedin successfully!",
+    token,
+    user:userExist
+  })
 
 })
 
