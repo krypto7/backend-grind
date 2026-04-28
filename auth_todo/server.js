@@ -15,83 +15,82 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-
 //singup:
 
-app.post("/signup",async(req,res)=>{
-  const {username,email,password} = req.body;
-  
-  if(!username || !email || !password){
+app.post("/signup", async (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
     return res.status(400).json({
-      msg:"all fields are required!!"
-    })
+      msg: "all fields are required!!",
+    });
   }
 
-  const userExist = await User.findOne({email});
+  const userExist = await User.findOne({ email });
 
-  if(userExist){
+  if (userExist) {
     return res.status(400).json({
-      msg:"user already exists"
-    })
+      msg: "user already exists",
+    });
   }
 
-  const hashPassword = await bcrypt.hash(password,10);
+  const hashPassword = await bcrypt.hash(password, 10);
 
   const user = await User.create({
     username,
     email,
-    password:hashPassword
-  })
+    password: hashPassword,
+  });
 
-  const token = jwt.sign({userId:user._id,email:user.email},process.env.JWT_SECRET);
+  const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.JWT_SECRET,
+  );
 
   res.status(200).json({
-    msg:"user register successfully!",
+    msg: "user register successfully!",
     token,
-    user:user
-  })
-
-})
-
+    user: user,
+  });
+});
 
 //singin:
 
-app.post("/singin",async(req,res)=>{
-  const {email,password} = req.body;
-  
-  if(!email || !password){
+app.post("/singin", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
     return res.status(400).json({
-      msg:"all fields are required!!"
-    })
+      msg: "all fields are required!!",
+    });
   }
 
-  const userExist = await User.findOne({email});
+  const userExist = await User.findOne({ email });
 
-  if(!userExist){
+  if (!userExist) {
     return res.status(400).json({
-      msg:"user not found!!"
-    })
+      msg: "user not found!!",
+    });
   }
 
-  const isMatch = await bcrypt.compare(password,userExist.password);
+  const isMatch = await bcrypt.compare(password, userExist.password);
 
-  if(!isMatch){
-    return res.status(400).json({msg:"invalid credintial"});
+  if (!isMatch) {
+    return res.status(400).json({ msg: "invalid credintial" });
   }
 
-    const token = jwt.sign(
-      { userId: userExist._id, email: userExist.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+  const token = jwt.sign(
+    { userId: userExist._id, email: userExist.email },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" },
+  );
 
   res.status(200).json({
-    msg:"user loggedin successfully!",
+    msg: "user loggedin successfully!",
     token,
-    user:userExist
-  })
-
-})
+    user: userExist,
+  });
+});
 
 //Todo-section:
 
