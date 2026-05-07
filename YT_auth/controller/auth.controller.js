@@ -193,6 +193,32 @@ export const logout = async (req, res) => {
   }
 };
 
+export const logoutAll = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(400).json({ msg: "token not found" });
+  }
+
+  const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
+
+  await Session.updateMany(
+    {
+      user: decoded.id,
+      revoke: false,
+    },
+    {
+      revoke: true,
+    },
+  );
+
+  res.clearCookie("refreshToken");
+
+  res.status(200).json({
+    msg: "Logged out from all device successfully",
+  });
+};
+
 export const login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
