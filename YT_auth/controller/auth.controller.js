@@ -1,8 +1,11 @@
 import User from "../model/User.model.js";
 import bcrypt from "bcrypt";
-import jwt, { decode } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import config from "../config/config.js";
 import Session from "../model/session.model.js";
+import { sendEmail } from "../services/email.service.js";
+import { generateOTP, getOtpHTML } from "../utils/utils.js";
+import OTP from "../model/otp.model.js";
 
 export const register = async (req, res) => {
   try {
@@ -32,38 +35,54 @@ export const register = async (req, res) => {
       password: hashPassword,
     });
 
-    const refreshToken = jwt.sign({ id: user._id }, config.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    // const refreshToken = jwt.sign({ id: user._id }, config.JWT_SECRET, {
+    //   expiresIn: "1d",
+    // });
 
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+    // const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
 
-    const session = await Session.create({
+    // const session = await Session.create({
+    //   user: user._id,
+    //   refreshTokenHash,
+    //   ip: req.ip,
+    //   userAgent: req.headers["user-agent"],
+    // });
+
+    // const accessToken = jwt.sign(
+    //   { id: user._id, sessionId: session._id },
+    //   config.JWT_SECRET,
+    //   {
+    //     expiresIn: "15m",
+    //   },
+    // );
+
+    // await res.cookie("refreshToken", refreshToken, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "strict",
+    //   maxAge: 7 * 24 * 60 * 60 * 1000,
+    // });
+
+    const otp = generateOTP();
+    const html = getOtpHTML(otp);
+
+    const otpHash = await bcrypt.hash(otp, 10);
+    await OTP.create({
+      email,
+      otpHash,
       user: user._id,
-      refreshTokenHash,
-      ip: req.ip,
-      userAgent: req.headers["user-agent"],
     });
 
-    const accessToken = jwt.sign(
-      { id: user._id, sessionId: session._id },
-      config.JWT_SECRET,
-      {
-        expiresIn: "15m",
-      },
-    );
-
-    await res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    await sendEmail(email, "OTP verificaiton", `Your OTP code is ${otp}`, html);
 
     await res.status(200).json({
       msg: "user register successfully",
-      user,
-      accessToken,
+      user: {
+        username: user.username,
+        email: user.email,
+        verified: user.verified,
+      },
+      // accessToken,
     });
   } catch (error) {
     res.status(400).json({ msg: error });
@@ -235,6 +254,10 @@ export const login = async (req, res) => {
     });
   }
 
+  if (!user.verified) {
+    return res.status(400).json({ msg: "user not verified!!" });
+  }
+
   const isMatch = await bcrypt.compare(password, user.password);
 
   if (!isMatch) {
@@ -273,4 +296,51 @@ export const login = async (req, res) => {
     msg: "user sigin successfully",
     accessToken,
   });
+};
+
+export const verifyEmail = async (req, res) => {
+  try {
+    const { otp, email } = req.body;
+
+    const otpDoc = await OTP.findOne({ email });
+
+    if (!otpDoc) {
+      return res.status(400).json({
+        msg: "OTP not found or expired",
+      });
+    }
+
+    const isOtpValid = await bcrypt.compare(otp, otpDoc.otpHash);
+
+    if (!isOtpValid) {
+      return res.status(400).json({ msg: "Invalid otp" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      otpDoc.user,
+      {
+        verified: true,
+      },
+      { new: true },
+    );
+
+    await OTP.deleteMany({
+      user: otpDoc.user,
+    });
+
+    res.status(200).json({
+      msg: "Email verify successfully",
+      user: {
+        username: user.username,
+        email: user.email,
+        verified: user.verified,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      msg: error.message,
+    });
+  }
 };
