@@ -1,0 +1,22 @@
+import mongoose from "mongoose";
+
+const otpSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+    },
+    otpHash: {
+      type: String,
+      required: true,
+    },
+  },
+  { timestamps: true },
+);
+
+const OTP = mongoose.model("OTP", otpSchema);
+export default OTP;
