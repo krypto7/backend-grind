@@ -3,9 +3,16 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import config from "../config/config.js";
 import Session from "../models/session.model.js";
-import { getOtpHtml, generateOtp } from "../../utils/utils.js";
+import { generateOtp, getOtpHtml } from "../../utils/utils.js";
 import OTP from "../models/otp.model.js";
 import { sendEmail } from "../../services/email.service.js";
+
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
 
 export const register = async (req, res) => {
   try {
@@ -67,7 +74,8 @@ export const register = async (req, res) => {
     //   maxAge: 7 * 24 * 60 * 60 * 1000,
     // });
 
-    const otp = generateOTP();
+    const otp = generateOtp();
+    console.log("===>", otp);
     const html = getOtpHtml(otp);
 
     const otpHash = await bcrypt.hash(otp, 10);
@@ -78,11 +86,7 @@ export const register = async (req, res) => {
       user: user._id,
     });
 
-    await OTP.res.status(200).json({
-      msg: "user registered successfully",
-      accessToken,
-    });
-    await sendEmail(email, "OTP verification", `Your OTP code is ${otp}`, html);
+    await sendEmail(email, "OTP verificaiton", `Your OTP code is ${otp}`, html);
 
     await res.status(200).json({
       msg: "user register successfull",
@@ -111,9 +115,9 @@ export const getUser = async (req, res) => {
     });
   }
 
-  const decode = jwt.verify(token, config.JWT_SECRET);
+  const decode = jwt.verify(token, config.REFRESH_SECRET);
 
-  const user = await User.findById(decode.id);
+  const user = await User.findById(decode.id).select("-password");
 
   res.status(200).json({
     msg: "user found successfully",
@@ -129,14 +133,22 @@ export const refreshToken = async (req, res) => {
     });
   }
 
-  const decode = jwt.verify(token, config.JWT_SECRET);
-
-  const accessToken = jwt.sign({ id: decode.id }, config.JWT_SECRET);
+  const decode = jwt.verify(token, config.REFRESH_SECRET);
 
   const session = await Session.findOne({
     user: decode.id,
     revoke: false,
   });
+
+  if (!session) {
+    return res.status(400).json({ msg: "session not found" });
+  }
+
+  const accessToken = jwt.sign(
+    { id: decode.id, sessionId: session._id },
+    config.JWT_SECRET,
+    { expiresIn: "15m" },
+  );
 
   const newRefreshToken = jwt.sign({ id: decode.id }, config.REFRESH_SECRET, {
     expiresIn: "7d",
@@ -144,15 +156,10 @@ export const refreshToken = async (req, res) => {
 
   const refreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
 
-  user.refreshToken = refreshTokenHash;
-  await user.save();
+  session.refreshTokenHash = refreshTokenHash;
+  await session.save();
 
-  res.cookie("refreshToken", newRefreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("refreshToken", newRefreshToken, refreshCookieOptions);
 
   res.status(200).json({
     msg: "accessToken refresh successfully",
@@ -210,12 +217,7 @@ export const login = async (req, res) => {
     },
   );
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
   res.status(200).json({
     msg: "user sigin successfully",
@@ -232,7 +234,7 @@ export const logOut = async (req, res) => {
     });
   }
 
-  const decode = jwt.verify(token, config.JWT_SECRET);
+  const decode = jwt.verify(token, config.REFRESH_SECRET);
 
   const sessions = await Session.find({
     user: decode.id,
@@ -243,10 +245,7 @@ export const logOut = async (req, res) => {
 
   //compare hash ref token:
   for (const session of sessions) {
-    const isMatch = await bcrypt.compare(
-      refreshToken,
-      session.refreshTokenHash,
-    );
+    const isMatch = await bcrypt.compare(token, session.refreshTokenHash);
 
     if (isMatch) {
       currentSession = session;
@@ -262,7 +261,7 @@ export const logOut = async (req, res) => {
 
   currentSession.revoke = true;
 
-  await user.save();
+  await currentSession.save();
 
   res.clearCookie("refreshToken");
 
@@ -280,12 +279,12 @@ export const logoutAll = async (req, res) => {
     });
   }
 
-  const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
+  const decoded = jwt.verify(refreshToken, config.REFRESH_SECRET);
 
   await Session.updateMany(
     {
       user: decoded.id,
-      revoke: fasle,
+      revoke: false,
     },
     {
       revoke: true,
@@ -302,12 +301,21 @@ export const logoutAll = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   const { otp, email } = req.body;
 
+  if (!otp || !email) {
+    return res.status(400).json({ msg: "email and OTP are required" });
+  }
+
   const otpDoc = await OTP.findOne({ email });
 
   if (!otpDoc) {
     return res.status(400).json({
       msg: "OTP not found",
     });
+  }
+
+  const otpValid = await bcrypt.compare(String(otp), otpDoc.otpHash);
+  if (!otpValid) {
+    return res.status(400).json({ msg: "invalid OTP" });
   }
 
   const user = await User.findByIdAndUpdate(
