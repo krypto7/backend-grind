@@ -10,7 +10,7 @@ export const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true, //for darabase searching field enable option (its costly)
+      index: true, //for database searching field enable option (its costly)
     },
     watchHistory: [
       {
