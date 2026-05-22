@@ -15,11 +15,12 @@ export const registerUser = asyncHandler(async (req, res) => {
   //check for user creation
   //resturn response.
 
-  const { username, email, fullName } = req.body;
-  dsd;
+  const { username, email, fullName, password } = req.body;
 
-  if ([username, email, fullName].some((field) => field?.trim() === "")) {
-    throw Error(400, "full name is required");
+  if (
+    [username, email, fullName, password].some((field) => field?.trim() === "")
+  ) {
+    throw new ApiError(400, "full name is required");
   }
 
   const userExist = await User.findOne({
@@ -27,11 +28,12 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (userExist) {
-    throw Error(400, "user already exist");
+    throw new ApiError(400, "user already exist");
   }
 
   const avtarLocalpath = req?.files?.avtar[0]?.path;
-  const coverImageLocalPath = req?.files?.coverImage[0];
+  const coverImageLocalPath = req?.files?.coverImage[0]?.path;
+  console.log("avtarLocalpath====>", avtarLocalpath);
 
   if (!avtarLocalpath) {
     throw new ApiError(400, "avtar file is required");
@@ -40,17 +42,18 @@ export const registerUser = asyncHandler(async (req, res) => {
   const avtar = await uploadOnCloudinary(avtarLocalpath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-  if (!avtart) {
+  if (!avtar) {
     throw new ApiError(400, "avtar file is required");
   }
 
+  console.log("username====", username);
   const user = await User.create({
     fullName,
     avtar: avtar.url,
     coverImage: coverImage?.url || "",
     email,
     password,
-    username: username.toLowercase(),
+    username: username?.toLowerCase(),
   });
 
   const createdUser = await User.findById(user._id).select(

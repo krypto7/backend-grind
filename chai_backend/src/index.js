@@ -1,11 +1,21 @@
 import dotenv from "dotenv";
-import dbConnection from "./db/index.js";
-import app from "./app.js";
+import { resolve } from "path";
 
-dotenv.config();
+// Load environment variables before importing files that use process.env.
+dotenv.config({ path: resolve(process.cwd(), ".env") });
 
-dbConnection();
+const startServer = async () => {
+  // Dynamic imports run after dotenv.config(), so app/db get the loaded env values.
+  const { default: dbConnection } = await import("./db/index.js");
+  const { default: app } = await import("./app.js");
 
-app.listen(process.env.PORT, () =>
-  console.log(`app runningn on ${process.env.PORT}`)
-);
+  await dbConnection();
+
+  app.listen(process.env.PORT, () =>
+    console.log(`app running on ${process.env.PORT}`)
+  );
+};
+
+startServer().catch((error) => {
+  console.log("Error starting server:", error);
+});
