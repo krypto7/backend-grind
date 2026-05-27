@@ -224,3 +224,101 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     throw new ApiError(400, error?.message || "invalid refresh token");
   }
 });
+
+export const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  const user = await User.findById(req?.user._id);
+
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "invalid password");
+  }
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "password changed successfully!!!"));
+});
+
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  res.status(200).json(new ApiResponse(200, req?.user, "currentUser"));
+});
+
+export const updateAccountDetails = asyncHandler(async (req, res) => {
+  console.log("=====req.body", req.body);
+
+  const { fullName, email } = req.body || {};
+
+  if (!(fullName || email)) {
+    return new ApiResponse(400, "all fields are required");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res.status(200).json(new ApiResponse(200, "user updated"));
+});
+
+export const updateUserAvtar = asyncHandler(async (req, res) => {
+  const avtarLocalPath = req.file?.path;
+
+  if (!avtarLocalPath) {
+    throw new ApiError(400, "avtar file missing");
+  }
+
+  const avtar = await uploadOnCloudinary(avtarLocalPath);
+
+  if (!avtar.url) {
+    throw new ApiError(400, "error while uploading avtar");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req?.user._id,
+    {
+      $set: { avtar: avtar.url },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "user cover image updated"));
+});
+
+export const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = req.file?.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "avtar file missing");
+  }
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage.url) {
+    throw new ApiError(400, "error while uploading avtar");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req?.user._id,
+    {
+      $set: { avtar: coverImage.url },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "user cover image updated"));
+});
