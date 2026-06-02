@@ -1,6 +1,5 @@
-import User from "../models/user.model";
-import { uploadOnCloudinary } from "./cloudinary";
+import { v2 as cloudinary } from "cloudinary";
 
-const oldImageRemove = async (oldImagePath) => {
-
+export const oldImageRemove = async (public_id) => {
+  return cloudinary.uploader.destroy(public_id);
 };
