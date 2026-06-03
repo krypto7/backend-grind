@@ -43,21 +43,28 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "full name is required");
   }
 
+  console.log("Step 1");
+
   const userExist = await User.findOne({
-    $or: [{ email }, { username }],
+    $or: [{ email }, { username: username.toLowerCase() }],
   });
 
+  console.log("userExist =>", userExist);
+
   if (userExist) {
+    console.log("Step 2");
     throw new ApiError(400, "user already exist");
   }
 
-  const avtarLocalpath = req?.files?.avtar[0]?.path;
-  const coverImageLocalPath = req?.files?.coverImage[0]?.path;
-  console.log("avtarLocalpath====>", avtarLocalpath);
+  console.log("Step 3");
+
+  const avtarLocalpath = req.files?.avtar?.[0]?.path;
 
   if (!avtarLocalpath) {
-    throw new ApiError(400, "avtar file is required");
+    throw new ApiError(400, "Avatar file is required");
   }
+
+  const coverImageLocalPath = req.files?.coverImage?.[0]?.path || "";
 
   const avtar = await uploadOnCloudinary(avtarLocalpath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
@@ -273,7 +280,7 @@ export const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 export const updateUserAvtar = asyncHandler(async (req, res) => {
-  const avtarLocalPath = req.file?.path;
+  const { avtarLocalPath } = req.file?.path;
 
   if (!avtarLocalPath) {
     throw new ApiError(400, "avtar file missing");
