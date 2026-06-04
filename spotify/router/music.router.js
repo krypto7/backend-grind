@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const musicController = require("../controller/music.controller");
-const authMiddleware = require("../middleware/auth.middleware");
+const musicController = require("../controller/music.controller.js");
+const authMiddleware = require("../middleware/auth.middleware.js");
 const multer = require("multer");
 
 const upload = multer({ storage: multer.memoryStorage() });

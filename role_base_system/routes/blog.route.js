@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const blogController = require("../controller/blog.controller");
-const auth = require("../middleware/auth.middleware");
+const blogController = require("../controller/blog.controller.js");
+const auth = require("../middleware/auth.middleware.js");
 
 //public
 router.get("/blog-list", blogController.blogList);
