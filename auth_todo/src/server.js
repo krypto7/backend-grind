@@ -1,4 +1,4 @@
-import dbConnection from "../../chai_backend/src/db/index.js";
+import dbConnection from "./db/dbConnection.js";
 import app from "./app.js";
 import dotenv from "dotenv";
 
