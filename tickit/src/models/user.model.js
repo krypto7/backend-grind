@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    tasks: {
+      type: mongoose.Types.ObjectId,
+      ref: "Todo",
+    },
     refreshToken: {
       type: String,
     },
