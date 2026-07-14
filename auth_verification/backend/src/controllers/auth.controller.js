@@ -209,7 +209,7 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    const OTP = Math.floor(100000 + Math.random() * 9000000).toString();
+    const OTP = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = new Date(Date.now() + 10 * 60 * 1000);
 
     console.log("OTP=====", OTP);
@@ -224,7 +224,7 @@ export const forgotPassword = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: error.message,
+      message: "otp sent successfully",
     });
   } catch (error) {
     return res.status(500).json({
@@ -232,4 +232,64 @@ export const forgotPassword = async (req, res) => {
       message: error.message,
     });
   }
+};
+
+export const verifyOTP = async (req, res) => {
+  const { otp } = req.body;
+  const email = req.params.email;
+
+  if (!otp) {
+    return res.status(400).json({ success: false, message: "otp required" });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "user not found!" });
+    }
+
+    if (!user.otp || !user.otpExpiry) {
+      return res.status(404).json({
+        success: false,
+        message: "otp not generated or already verified",
+      });
+    }
+
+    if (user.otpExpiry < new Date()) {
+      return res.status(404).json({
+        success: false,
+        message: "otp has expiried plz request a new one",
+      });
+    }
+
+    if (otp !== user.otp) {
+      return res.status(404).json({
+        success: false,
+        message: "invalid otp",
+      });
+    }
+    user.otp = null;
+    user.otpExpiry = null;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "otp verified successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "internal server error",
+    });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  const { newPassword , confirmPassword } = req.body;
+
+
+
 };

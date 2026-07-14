@@ -9,5 +9,6 @@ router.post("/verify", authController.verification);
 router.post("/login", authController.login);
 router.post("/logout", isAuthenticated, authController.logout);
 router.post("/forgot-password", authController.forgotPassword);
+router.post("/verify-otp/:email", authController.verifyOTP);
 
 export default router;
