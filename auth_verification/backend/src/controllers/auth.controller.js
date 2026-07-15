@@ -288,8 +288,38 @@ export const verifyOTP = async (req, res) => {
 };
 
 export const changePassword = async (req, res) => {
-  const { newPassword , confirmPassword } = req.body;
+  const { newPassword, confirmPassword } = req.body;
+  const email = req.params.email;
 
+  if (!newPassword || !confirmPassword) {
+    return res
+      .status(400)
+      .json({ success: false, message: "all fields are required" });
+  }
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "password not match",
+    });
+  }
 
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "user not found" });
+    }
+    const hashPassword = await bcrypt.hash(newPassword, 10);
 
+    user.password = hashPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      msg: "password changed successfully",
+    });
+  } catch (error) {
+    console.log("=====err", error);
+  }
 };
