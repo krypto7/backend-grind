@@ -17,17 +17,23 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 // import { useState } from "react";
 
-function Login() {
+function PasswordReset() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
-    password: "",
+    newPassword: "",
+    confirmPassword: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setLoading] = useState(false);
 
-  const handlePassword = () => {
-    setShowPassword(!showPassword);
+  const handleNewPassword = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const handleConfirmPassword = () => {
+    setShowConfirmPassword(!showConfirmPassword);
   };
 
   const handleChange = (e) => {
@@ -44,7 +50,7 @@ function Login() {
     try {
       setLoading(true);
       const res = await axios.post(
-        `http://localhost:8000/api/auth/login`,
+        `http://localhost:8000/api/auth/forgot-password`,
         formData,
         {
           headers: {
@@ -53,7 +59,7 @@ function Login() {
         },
       );
       if (res.data.success) {
-        navigate("/");
+        navigate("/home");
         toast.success(res.data.message);
       }
     } catch (error) {
@@ -70,56 +76,64 @@ function Login() {
           <div className="w-full max-w-md space-y-6">
             <div className="text-center space-y-2 flex flex-col items-center">
               <h1 className="text-3xl font-bold tracking-tight text-green-600">
-                Create your account
+                Reset Your Password
               </h1>
-              <p>Start organizing your throughts and ideas todays</p>
 
               <Card className="w-full max-w-sm">
                 <CardHeader>
-                  <CardTitle>Login</CardTitle>
+                  <CardTitle>Reset Password</CardTitle>
                   <CardDescription>
-                    Enter your email below to login to your account
+                    Enter your email below to receive a password reset link
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col gap-6">
                     <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="m@example.com"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
                       <div className="flex items-center">
-                        <Label htmlFor="password">Password</Label>
-                        <a
-                          href="/forgot-password"
-                          className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                        >
-                          Forgot Password?
-                        </a>
+                        <Label htmlFor="newPassword">New Password</Label>
                       </div>
                       <div className="relative">
                         <Input
-                          id="password"
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          value={formData.password}
+                          id="newPassword"
+                          name="newPassword"
+                          type={showNewPassword ? "text" : "password"}
+                          value={formData.newPassword}
                           onChange={handleChange}
-                          placeholder="Enter your password"
+                          placeholder="Enter your new password"
                           required
                         />
                         <button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={handlePassword}
+                          onClick={handleNewPassword}
+                          className="absolute right-0 top-0 h-full px-3"
+                        >
+                          <Eye />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <div className="flex items-center">
+                        <Label htmlFor="confirmPassword">
+                          Confirm Password
+                        </Label>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          placeholder="Confirm your new password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleConfirmPassword}
                           className="absolute right-0 top-0 h-full px-3"
                         >
                           <Eye />
@@ -137,10 +151,10 @@ function Login() {
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        logging in
+                        resetting password
                       </>
                     ) : (
-                      "Login"
+                      "Reset Password"
                     )}
                   </Button>
                 </CardFooter>
@@ -153,4 +167,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default PasswordReset;

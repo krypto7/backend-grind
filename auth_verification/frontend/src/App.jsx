@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
 import Verify from "./pages/Verify";
+import PasswordReset from "./pages/PasswordReset";
 
 function App() {
   const router = createBrowserRouter([
@@ -27,6 +28,10 @@ function App() {
     {
       path: "/signup",
       element: <Signup />,
+    },
+    {
+      path: "/forgot-password",
+      element: <PasswordReset />,
     },
   ]);
 
