@@ -15,9 +15,11 @@ import { useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { getData } from "@/context/UserContext";
 // import { useState } from "react";
 
 function Login() {
+  const { setUser } = getData();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
@@ -54,6 +56,8 @@ function Login() {
       );
       if (res.data.success) {
         navigate("/");
+        setUser(res.data.data);
+        localStorage.setItem("accessToken", res.data.accessToken);
         toast.success(res.data.message);
       }
     } catch (error) {

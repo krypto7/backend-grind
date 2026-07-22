@@ -6,12 +6,19 @@ import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
 import Verify from "./pages/Verify";
 import PasswordReset from "./pages/PasswordReset";
+import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ForgetPassword from "./pages/ForgetPassword";
 
 function App() {
   const router = createBrowserRouter([
     {
       path: "/",
-      element: <Home />,
+      element: (
+        <ProtectedRoute>
+          <Navbar /> <Home />
+        </ProtectedRoute>
+      ),
     },
     {
       path: "/login",
@@ -31,7 +38,8 @@ function App() {
     },
     {
       path: "/forgot-password",
-      element: <PasswordReset />,
+      // element: <PasswordReset />,
+      element: <ForgetPassword />,
     },
   ]);
 
