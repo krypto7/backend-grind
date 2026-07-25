@@ -5,10 +5,12 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import VerifyEmail from "./pages/VerifyEmail";
 import Verify from "./pages/Verify";
-import PasswordReset from "./pages/PasswordReset";
+
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ForgetPassword from "./pages/ForgetPassword";
+import VerifyOTP from "./pages/VerifyOTP";
+import ChangePassword from "./pages/ChangePassword";
 
 function App() {
   const router = createBrowserRouter([
@@ -33,13 +35,20 @@ function App() {
       element: <Verify />,
     },
     {
+      path: "/verify-otp/:email",
+      element: <VerifyOTP />,
+    },
+    {
       path: "/signup",
       element: <Signup />,
     },
     {
       path: "/forgot-password",
-      // element: <PasswordReset />,
       element: <ForgetPassword />,
+    },
+    {
+      path: "/change-password/:email",
+      element: <ChangePassword />,
     },
   ]);
 

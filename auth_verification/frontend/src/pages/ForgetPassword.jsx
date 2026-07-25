@@ -10,19 +10,42 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import axios from "axios";
 
 import { CheckCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const ForgetPassword = () => {
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
-  //   const naviagte = useNavigate();
+  const navigate = useNavigate();
 
-  const handleForgotPassword = () => {};
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        `http://localhost:8000/api/auth/forgot-password`,
+        { email },
+      );
+      if (res.data.success) {
+        navigate(`/verify-otp/${encodeURIComponent(email)}`);
+      }
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          error.response?.data?.errors?.email?.[0] ||
+          "Something went wrong",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="relative w-full h-[760px] bg-green-100 overflow-hidden">
@@ -52,7 +75,7 @@ const ForgetPassword = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {error && (
-                  <Alert variant="descructive">
+                  <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
@@ -94,7 +117,11 @@ const ForgetPassword = () => {
                         disabled={isLoading}
                       />
                     </div>
-                    <Button className="w-full bg-green-600 text-white relative hover:bg-green-500 cursor-pointer">
+                    <Button
+                      type="submit"
+                      disabled={isLoading || !email}
+                      className="w-full bg-green-600 text-white relative hover:bg-green-500 cursor-pointer"
+                    >
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
