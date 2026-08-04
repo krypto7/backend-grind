@@ -11,8 +11,6 @@ const transporter = nodemailer.createTransport({
 });
 
 export const verifyEmail = async (token, email) => {
-  console.log("email======>", email);
-  console.log("email======>", process.env.FRONTEND_URL);
   if (!process.env.FRONTEND_URL) {
     throw new Error("FRONTEND_URL is missing. Set it in your .env file.");
   }
