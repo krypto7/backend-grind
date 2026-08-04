@@ -21,7 +21,11 @@ export const registrationHandler = async (req: Request, res: Response) => {
       });
     }
 
-    const { name, email, password } = result.data;
+    const { name, email, password } = result.data as {
+      name: string;
+      email: string;
+      password: string;
+    };
 
     const normalizeEmail = email.toLowerCase().trim();
 
@@ -53,7 +57,7 @@ export const registrationHandler = async (req: Request, res: Response) => {
       },
     );
 
-    const verifyURL = `${getAppUrl}/auth/verify-email?token=${verifyToken}`;
+    const verifyURL = `${getAppUrl()}/auth/verify-email?token=${verifyToken}`;
 
     await sendEmail(
       newUser.email,
@@ -125,7 +129,10 @@ export const loginHandler = async (req: Request, res: Response) => {
       });
     }
 
-    const { email, password } = result.data;
+    const { email, password } = result.data as {
+      email: string;
+      password: string;
+    };
 
     const normalizeEmail = email.toLowerCase().trim();
 
@@ -174,8 +181,15 @@ export const loginHandler = async (req: Request, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role, 
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        twoFactorEnable: user.twoFactorEnable,
       },
     });
-  } catch (error) {}
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      msg: "internal server error",
+    });
+  }
 };
