@@ -1,0 +1,18 @@
+{
+  "contact": [
+    {
+      "id": "1",
+      "userId": "1234",
+      "name": "Hello",
+      "email": "hello@yopmail.com"
+    }
+  ],
+  "users": [
+    {
+      "id": "1",
+      "name": "Hello",
+      "email": "user1@yopmail.com",
+      "password": "user1@yopmail.com"
+    }
+  ]
+}
