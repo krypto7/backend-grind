@@ -9,9 +9,7 @@ const serverStart = async () => {
     await dbConnection();
     const port = Number(process.env.PORT) || 8000;
 
-    app.listen(port, () =>
-      console.log(`app running on ${port}`),
-    );
+    app.listen(port, () => console.log(`app running on ${port}`));
   } catch (error) {
     console.log("error=====", error);
   }
