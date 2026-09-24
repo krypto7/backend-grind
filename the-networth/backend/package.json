@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "nodemon --exec tsx src/server.ts",
+    "dev": "nodemon --watch src --ext ts,json --legacy-watch --delay 300ms --exec \"npx tsx ./src/server.ts\"",
     "build": "tsc",
     "start": "node dist/server.js"
   },
@@ -17,8 +17,10 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
+    "handlebars": "^4.7.9",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.10.2"
+    "mongoose": "^9.10.2",
+    "nodemailer": "^10.0.10"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

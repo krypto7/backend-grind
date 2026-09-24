@@ -2,12 +2,14 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-interface User {
+export interface User {
   username: string;
   firstname: string;
   lastname: string;
   email: string;
   password: string;
+  isVerified: boolean;
+  emailVerificationToken: string;
   refreshToken?: string | null;
 }
 
@@ -42,11 +44,18 @@ const userSchema = new mongoose.Schema<User, UserModel, UserMethods>(
       lowercase: true,
       unique: true,
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
     password: {
       type: String,
       required: true,
     },
     refreshToken: {
+      type: String,
+    },
+    emailVerificationToken: {
       type: String,
     },
   },
@@ -93,5 +102,7 @@ userSchema.methods.generateRefreshToken = function (): string {
 };
 
 const User = mongoose.model<User, UserModel>("User", userSchema);
+
+export type UserDocument = mongoose.HydratedDocument<User, UserMethods>;
 
 export default User;
