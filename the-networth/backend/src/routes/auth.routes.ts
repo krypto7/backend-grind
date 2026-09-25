@@ -13,5 +13,9 @@ router
 router.route("/getCurrentUser").get(verifyJWT, authController.getCurrentUser);
 router.route("/logout").get(verifyJWT, authController.logout);
 router.route("/verify-email").get(authController.verifyEmail);
+router.route("/verify-otp").post(authController.verifyOTP);
+router.route("/verify-otp/:email").post(authController.verifyOTP);
+router.route("/resend-otp").post(authController.resendOTP);
+router.route("/resend-otp/:email").post(authController.resendOTP);
 
 export default router;

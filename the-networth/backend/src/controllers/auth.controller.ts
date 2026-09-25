@@ -2,6 +2,8 @@ import User from "../models/user.model.js";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { verifyEmail as sendVerifyEmail } from "../services/verifyEmail.js";
+import { otpGenerate } from "../lib/otpGenerate.js";
+import { sendOTP } from "../services/otpmail.js";
 
 interface SignupBody {
   firstname: string;
@@ -15,6 +17,16 @@ interface LoginBody {
   email: string;
   password: string;
 }
+
+export const normalizeEmail = (email: unknown): string => {
+  return String(email ?? "")
+    .trim()
+    .toLowerCase();
+};
+
+export const normalizeOTP = (otp: unknown): string => {
+  return String(otp ?? "").trim();
+};
 
 const generateAccessRefershToken = async (
   userId: string,
@@ -44,7 +56,8 @@ export const signup = async (
   req: Request<{}, {}, SignupBody>,
   res: Response,
 ): Promise<Response> => {
-  const { firstname, lastname, username, email, password } = req.body;
+  const { firstname, lastname, username, password } = req.body;
+  const email = normalizeEmail(req.body.email);
 
   if (!firstname || !lastname || !email || !username || !password) {
     return res.status(401).json({
@@ -72,19 +85,17 @@ export const signup = async (
     username: username?.toLowerCase(),
   });
 
-  const token = jwt.sign({ id: user?._id }, process.env.SECRET_KEY as string, {
-    expiresIn: "10m",
-  });
-  await sendVerifyEmail(email, token);
-
-  user.emailVerificationToken = token;
+  const otp = otpGenerate();
+  user.otp = otp;
+  user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
   await user.save();
+  await sendOTP(email, otp);
 
   return res.status(200).json({
     status: "success",
     user: user,
-    token: token,
+    otp: otp,
   });
 };
 
@@ -92,10 +103,8 @@ export const login = async (
   req: Request<{}, {}, LoginBody>,
   res: Response,
 ): Promise<Response> => {
-  const { email, password } = req.body;
-
-  console.log("dadsd===", email, password);
-
+  const email = normalizeEmail(req.body.email);
+  const { password } = req.body;
   if (!email || !password) {
     return res.status(401).json({
       status: false,
@@ -103,10 +112,9 @@ export const login = async (
     });
   }
 
-
   const user = await User.findOne({ email });
 
-  if(!user || !user.isVerified) {
+  if (!user || !user.isVerified) {
     return res.status(401).json({
       status: false,
       msg: "Email not verified",
@@ -266,7 +274,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
 export const verifyEmail = async (req: Request, res: Response) => {
   const token = req.query.token as string;
 
-  if(!token) {
+  if (!token) {
     return res.status(401).json({
       status: "false",
       msg: "unauthorise user",
@@ -274,13 +282,16 @@ export const verifyEmail = async (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.SECRET_KEY as string) as jwt.JwtPayload;
+    const decoded = jwt.verify(
+      token,
+      process.env.SECRET_KEY as string,
+    ) as jwt.JwtPayload;
     const user = await User.findOne({
       _id: decoded.id,
       emailVerificationToken: token,
     });
 
-    if(!user) {
+    if (!user) {
       return res.status(401).json({
         status: "false",
         msg: "unauthorise user",
@@ -296,7 +307,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
       status: "true",
       msg: "email verified",
     });
-    
   } catch (error) {
     return res.status(401).json({
       status: "false",
@@ -305,9 +315,111 @@ export const verifyEmail = async (req: Request, res: Response) => {
   }
 };
 
-export const sendOTP = async (req: Request, res: Response) => {};
+export const resendOTP = async (req: Request, res: Response) => {
+  const email = normalizeEmail(req.params.email || req.body?.email);
 
-export const verifyOTP = async (req: Request, res: Response) => {};
+  if (!email) {
+    return res.status(400).json({
+      status: "false",
+      msg: "Email is required",
+    });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "false",
+        msg: "User not found",
+      });
+    }
+
+    const otp = otpGenerate();
+    user.otp = otp;
+    user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+    await sendOTP(email, otp);
+
+    return res.status(200).json({
+      status: "true",
+      msg: "OTP resent successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: "false",
+      msg: "Internal server error",
+    });
+  }
+};
+
+export const verifyOTP = async (req: Request, res: Response) => {
+  const otp = normalizeOTP(req.body?.otp);
+  const email = normalizeEmail(req.params.email || req.body?.email);
+
+  if (!otp || !email) {
+    return res.status(400).json({
+      status: "false",
+      msg: "OTP and email are required",
+    });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "false",
+        msg: "User not found",
+      });
+    }
+
+    if (user.isVerified) {
+      const verifiedUser = await User.findById(user._id).select(
+        "-password -refreshToken -otp",
+      );
+      return res.status(200).json({
+        status: "true",
+        msg: "OTP verified successfully",
+        user: verifiedUser,
+      });
+    }
+
+    if (!user.otp || normalizeOTP(user.otp) !== otp) {
+      return res.status(400).json({
+        status: "false",
+        msg: "Invalid OTP",
+      });
+    }
+
+    if (user.otpExpiry && user.otpExpiry < new Date()) {
+      return res.status(400).json({
+        status: "false",
+        msg: "OTP has expired",
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        $set: { isVerified: true },
+        $unset: { otp: 1, otpExpiry: 1 },
+      },
+      { new: true },
+    ).select("-password -refreshToken -otp");
+
+    return res.status(200).json({
+      status: "true",
+      msg: "OTP verified successfully",
+      user: updatedUser,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: "false",
+      msg: "Internal server error",
+    });
+  }
+};
 
 export const uploadProfileImage = async (req: Request, res: Response) => {};
 export const removeProfileImage = async (req: Request, res: Response) => {};

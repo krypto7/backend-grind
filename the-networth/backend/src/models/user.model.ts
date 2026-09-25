@@ -9,8 +9,10 @@ export interface User {
   email: string;
   password: string;
   isVerified: boolean;
-  emailVerificationToken: string;
+  emailVerificationToken?: string;
   refreshToken?: string | null;
+  otp?: string | null;
+  otpExpiry?: Date | null;
 }
 
 interface UserMethods {
@@ -58,6 +60,8 @@ const userSchema = new mongoose.Schema<User, UserModel, UserMethods>(
     emailVerificationToken: {
       type: String,
     },
+    otp: { type: String, default: null },
+    otpExpiry: { type: Date, default: null },
   },
   { timestamps: true },
 );
