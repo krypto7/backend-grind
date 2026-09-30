@@ -9,7 +9,7 @@ export interface User {
   email: string;
   password: string;
   isVerified: boolean;
-  avtar: string;
+  avtar: string | null;
   emailVerificationToken?: string;
   refreshToken?: string | null;
   otp?: string | null;
@@ -47,15 +47,14 @@ const userSchema = new mongoose.Schema<User, UserModel, UserMethods>(
       lowercase: true,
       unique: true,
     },
+    avtar: {
+      type: String,
+    },
     isVerified: {
       type: Boolean,
       default: false,
     },
     password: {
-      type: String,
-      required: true,
-    },
-    avtar: {
       type: String,
       required: true,
     },

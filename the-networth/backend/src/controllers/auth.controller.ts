@@ -4,12 +4,14 @@ import jwt from "jsonwebtoken";
 import { verifyEmail as sendVerifyEmail } from "../services/verifyEmail.js";
 import { otpGenerate } from "../lib/otpGenerate.js";
 import { sendOTP } from "../services/otpmail.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 interface SignupBody {
   firstname: string;
   lastname: string;
   username: string;
   email: string;
+  avtar: string;
   password: string;
 }
 
@@ -66,9 +68,9 @@ export const signup = async (
     });
   }
 
-  const userExist = await User.findOne({
-    $or: [{ email }, { username: username.toLowerCase() }],
-  });
+  const userExist = await User.findOne({ email });
+
+  console.log("userExist", userExist);
 
   if (userExist) {
     return res.status(401).json({
@@ -77,10 +79,29 @@ export const signup = async (
     });
   }
 
+  const avtarLocalPath = req.file?.path;
+
+  if (!avtarLocalPath) {
+    return res.status(400).json({
+      status: false,
+      msg: "Avtar image is required",
+    });
+  }
+
+  const avtar = await uploadOnCloudinary(avtarLocalPath);
+
+  if (!avtar) {
+    return res.status(500).json({
+      status: false,
+      msg: "Failed to upload avtar image",
+    });
+  }
+
   const user = await User.create({
     firstname,
     lastname,
     email,
+    avtar: avtar.url,
     password,
     username: username?.toLowerCase(),
   });

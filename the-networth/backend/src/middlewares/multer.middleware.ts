@@ -1,9 +1,16 @@
 import multer from "multer";
 import crypto from "crypto";
+import { mkdir } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+const uploadDirectory = path.join(os.tmpdir(), "my-uploads");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "/tmp/my-uploads");
+    mkdir(uploadDirectory, { recursive: true }, (error) => {
+      cb(error, uploadDirectory);
+    });
   },
   filename: function (
     req: Express.Request,
