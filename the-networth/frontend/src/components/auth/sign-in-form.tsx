@@ -7,21 +7,29 @@ import { Input } from "@/components/ui/input";
 import { Field, authInputClass } from "@/components/auth/field";
 import { PasswordInput } from "@/components/auth/password-input";
 import { isEmail } from "@/lib/auth-form";
+import { signinAPI } from "@/lib/apiconfig";
 
 type SignInErrors = {
   email?: string;
   password?: string;
 };
 
-export function SignInForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<SignInErrors>({});
-  const [ready, setReady] = useState(false);
+type SignInFormData = {
+  email: string;
+  password: string;
+};
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+export function SignInForm() {
+  const [formData, setFormData] = useState<SignInFormData | null>(null);
+  const [errors, setErrors] = useState<SignInErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const email = formData?.email ?? "";
+    const password = formData?.password ?? "";
     const nextErrors: SignInErrors = {};
 
     if (!email.trim()) {
@@ -35,7 +43,18 @@ export function SignInForm() {
     }
 
     setErrors(nextErrors);
-    setReady(Object.keys(nextErrors).length === 0);
+    setMessage("");
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      await signinAPI({ email: email.trim(), password });
+      setMessage("Signed in successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to sign in.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -56,8 +75,13 @@ export function SignInForm() {
             type="email"
             autoComplete="email"
             placeholder="you@email.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            value={formData?.email ?? ""}
+            onChange={(event) =>
+              setFormData((current) => ({
+                email: event.target.value,
+                password: current?.password ?? "",
+              }))
+            }
             aria-invalid={Boolean(errors.email)}
             className={authInputClass}
           />
@@ -69,20 +93,28 @@ export function SignInForm() {
             name="password"
             autoComplete="current-password"
             placeholder="Your password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            value={formData?.password ?? ""}
+            onChange={(event) =>
+              setFormData((current) => ({
+                email: current?.email ?? "",
+                password: event.target.value,
+              }))
+            }
             aria-invalid={Boolean(errors.password)}
           />
         </Field>
 
-        {ready ? (
-          <p className="rounded-lg bg-secondary px-3 py-2.5 text-sm text-secondary-foreground">
-            Details look fine. Sign-in is not connected yet.
+        {message ? (
+          <p
+            role="status"
+            className="rounded-lg bg-secondary px-3 py-2.5 text-sm text-secondary-foreground"
+          >
+            {message}
           </p>
         ) : null}
 
-        <Button type="submit" className="h-11 w-full">
-          Sign in
+        <Button type="submit" className="h-11 w-full" disabled={isSubmitting}>
+          {isSubmitting ? "Signing in..." : "Sign in"}
         </Button>
       </form>
 
