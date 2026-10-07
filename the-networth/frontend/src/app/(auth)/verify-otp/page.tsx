@@ -8,10 +8,13 @@ export const metadata: Metadata = {
 export default async function VerifyOtpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string | string[] }>;
+  searchParams: Promise<{ email?: string | string[]; expires?: string | string[] }>;
 }) {
   const params = await searchParams;
   const email = Array.isArray(params.email) ? params.email[0] : params.email;
+  const expires = Array.isArray(params.expires)
+    ? params.expires[0]
+    : params.expires;
 
-  return <VerifyOtpForm email={email ?? ""} />;
+  return <VerifyOtpForm email={email ?? ""} expiresAt={expires ?? ""} />;
 }

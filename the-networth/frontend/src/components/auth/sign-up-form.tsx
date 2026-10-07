@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ImagePlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Field, authInputClass } from "@/components/auth/field";
 import { PasswordInput } from "@/components/auth/password-input";
 import { isEmail, isUsername } from "@/lib/auth-form";
+import { signupAPI } from "@/lib/api";
 
 type SignUpErrors = {
   firstname?: string;
@@ -17,21 +19,26 @@ type SignUpErrors = {
   email?: string;
   password?: string;
   confirmPassword?: string;
-  avatar?: string;
+  avtar?: string;
 };
 
 export function SignUpForm() {
   const router = useRouter();
-  const [firstname, setFirstname] = useState("");
-  const [lastname, setLastname] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [fileName, setFileName] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const previewRef = useRef<string | null>(null);
   const [errors, setErrors] = useState<SignUpErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const [formData, setFormData] = useState({
+    firstname: "",
+    lastname: "",
+    username: "",
+    email: "",
+    password: "",
+    avtar: null as File | null,
+  });
 
   useEffect(() => {
     return () => {
@@ -39,52 +46,93 @@ export function SignUpForm() {
     };
   }, []);
 
-  function onAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    console.log(formData);
+  };
+
+  function onavtarChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
 
     const nextPreview = file ? URL.createObjectURL(file) : null;
     previewRef.current = nextPreview;
     setFileName(file?.name ?? "");
     setPreview(nextPreview);
+
+    setFormData((prev) => ({ ...prev, avtar: file }));
   }
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const nextErrors: SignUpErrors = {};
 
-    if (!firstname.trim()) nextErrors.firstname = "Enter your first name.";
-    if (!lastname.trim()) nextErrors.lastname = "Enter your last name.";
+    if (!formData.firstname.trim())
+      nextErrors.firstname = "Enter your first name.";
+    if (!formData.lastname.trim())
+      nextErrors.lastname = "Enter your last name.";
 
-    if (!username.trim()) {
+    if (!formData.username.trim()) {
       nextErrors.username = "Choose a username.";
-    } else if (!isUsername(username)) {
+    } else if (!isUsername(formData.username)) {
       nextErrors.username = "Use 3–20 letters, numbers, or underscores.";
     }
 
-    if (!email.trim()) {
+    if (!formData.email.trim()) {
       nextErrors.email = "Enter your email.";
-    } else if (!isEmail(email)) {
+    } else if (!isEmail(formData.email)) {
       nextErrors.email = "Enter a valid email.";
     }
 
-    if (!password) {
+    if (!formData.password) {
       nextErrors.password = "Create a password.";
-    } else if (password.length < 8) {
+    } else if (formData.password.length < 8) {
       nextErrors.password = "Use at least 8 characters.";
     }
 
-    if (confirmPassword !== password) {
-      nextErrors.confirmPassword = "Passwords do not match.";
-    }
-
-    if (!fileName) nextErrors.avatar = "Add a profile photo.";
+    if (!fileName) nextErrors.avtar = "Add a profile photo.";
 
     setErrors(nextErrors);
+    setSubmitError("");
     if (Object.keys(nextErrors).length > 0) return;
 
-    router.push(`/verify-otp?email=${encodeURIComponent(email.trim())}`);
+    setIsSubmitting(true);
+
+    //create API payload:
+    const payload = new FormData();
+
+    payload.append("firstname", formData.firstname);
+    payload.append("lastname", formData.lastname);
+    payload.append("username", formData.username);
+    payload.append("email", formData.email);
+    payload.append("password", formData.password);
+
+    if (formData.avtar) {
+      payload.append("avtar", formData.avtar);
+    }
+
+    console.log("Payload:", payload);
+
+    try {
+      const data = await signupAPI(payload);
+      console.log("Signup successful:", data);
+
+      const expires = data.user?.otpExpiry
+        ? `&expires=${encodeURIComponent(data.user.otpExpiry)}`
+        : "";
+
+      router.push(
+        `/verify-otp?email=${encodeURIComponent(formData.email.trim())}${expires}`,
+      );
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Unable to sign up.",
+      );
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -99,14 +147,18 @@ export function SignUpForm() {
 
       <form onSubmit={onSubmit} className="mt-8 grid gap-5" noValidate>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="First name" htmlFor="firstname" error={errors.firstname}>
+          <Field
+            label="First name"
+            htmlFor="firstname"
+            error={errors.firstname}
+          >
             <Input
               id="firstname"
               name="firstname"
               autoComplete="given-name"
               placeholder="Alex"
-              value={firstname}
-              onChange={(event) => setFirstname(event.target.value)}
+              value={formData.firstname}
+              onChange={handleChange}
               aria-invalid={Boolean(errors.firstname)}
               className={authInputClass}
             />
@@ -117,8 +169,8 @@ export function SignUpForm() {
               name="lastname"
               autoComplete="family-name"
               placeholder="Morgan"
-              value={lastname}
-              onChange={(event) => setLastname(event.target.value)}
+              value={formData.lastname}
+              onChange={handleChange}
               aria-invalid={Boolean(errors.lastname)}
               className={authInputClass}
             />
@@ -129,15 +181,19 @@ export function SignUpForm() {
           label="Username"
           htmlFor="username"
           error={errors.username}
-          hint={errors.username ? undefined : "3–20 letters, numbers, or underscores."}
+          hint={
+            errors.username
+              ? undefined
+              : "3–20 letters, numbers, or underscores."
+          }
         >
           <Input
             id="username"
             name="username"
             autoComplete="username"
             placeholder="alexmorgan"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
+            value={formData.username}
+            onChange={handleChange}
             aria-invalid={Boolean(errors.username)}
             className={authInputClass}
           />
@@ -150,44 +206,32 @@ export function SignUpForm() {
             type="email"
             autoComplete="email"
             placeholder="you@email.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            value={formData.email}
+            onChange={handleChange}
             aria-invalid={Boolean(errors.email)}
             className={authInputClass}
           />
         </Field>
 
-        <Field label="Password" htmlFor="signup-password" error={errors.password}>
+        <Field
+          label="Password"
+          htmlFor="signup-password"
+          error={errors.password}
+        >
           <PasswordInput
             id="signup-password"
             name="password"
             autoComplete="new-password"
             placeholder="At least 8 characters"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            value={formData.password}
+            onChange={handleChange}
             aria-invalid={Boolean(errors.password)}
-          />
-        </Field>
-
-        <Field
-          label="Confirm password"
-          htmlFor="confirm-password"
-          error={errors.confirmPassword}
-        >
-          <PasswordInput
-            id="confirm-password"
-            name="confirmPassword"
-            autoComplete="new-password"
-            placeholder="Repeat your password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            aria-invalid={Boolean(errors.confirmPassword)}
           />
         </Field>
 
         <div className="grid gap-2">
           <label
-            htmlFor="avatar"
+            htmlFor="avtar"
             className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-input bg-muted/50 px-3 py-3 transition-colors hover:bg-muted"
           >
             {preview ? (
@@ -210,21 +254,33 @@ export function SignUpForm() {
               </span>
             </span>
             <input
-              id="avatar"
-              name="avatar"
+              id="avtar"
+              name="avtar"
               type="file"
               accept="image/*"
               className="sr-only"
-              onChange={onAvatarChange}
+              onChange={onavtarChange}
             />
           </label>
-          {errors.avatar ? (
-            <p className="text-sm text-destructive">{errors.avatar}</p>
+          {errors.avtar ? (
+            <p className="text-sm text-destructive">{errors.avtar}</p>
           ) : null}
         </div>
 
-        <Button type="submit" className="h-11 w-full">
-          Create account
+        {submitError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {submitError}
+          </p>
+        ) : null}
+
+        <Button
+          type="submit"
+          className="h-11 w-full"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+        >
+          {isSubmitting ? <Spinner /> : null}
+          {isSubmitting ? "Creating account..." : "Create account"}
         </Button>
       </form>
 

@@ -30,6 +30,23 @@ export const normalizeOTP = (otp: unknown): string => {
   return String(otp ?? "").trim();
 };
 
+const baseCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
+
+const accessCookieOptions = {
+  ...baseCookieOptions,
+  maxAge: 24 * 60 * 60 * 1000,
+};
+
+const refreshCookieOptions = {
+  ...baseCookieOptions,
+  maxAge: 10 * 24 * 60 * 60 * 1000,
+};
+
 const generateAccessRefershToken = async (
   userId: string,
 ): Promise<{
@@ -158,21 +175,13 @@ export const login = async (
     "-password -refreshToken",
   );
 
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production" ? true : false,
-    sameSite: "strict" as const,
-  };
-
   return res
     .status(200)
-    .cookie("refreshToken", refreshToken, options)
-    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, refreshCookieOptions)
+    .cookie("accessToken", accessToken, accessCookieOptions)
     .json({
       status: "success",
       user: loggedInUser,
-      accessToken,
-      refreshToken,
     });
 };
 
@@ -209,24 +218,16 @@ export const refreshAccessToken = async function (req: Request, res: Response) {
       });
     }
 
-    const options = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict" as const,
-    };
-
     const { accessToken, refreshToken: newRefreshToken } =
       await generateAccessRefershToken(user._id.toString());
 
     return res
       .status(200)
-      .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("accessToken", accessToken, accessCookieOptions)
+      .cookie("refreshToken", newRefreshToken, refreshCookieOptions)
       .json({
         status: "true",
         msg: "AccessToken Refreshed",
-        accessToken,
-        refreshToken: newRefreshToken,
       });
   } catch (error) {
     return res.status(401).json({
@@ -260,15 +261,10 @@ export const logout = async (req: Request, res: Response) => {
     },
   );
 
-  const option = {
-    httpOnly: true,
-    secure: true,
-  };
-
   return res
     .status(200)
-    .clearCookie("accessToken", option)
-    .clearCookie("refreshToken", option)
+    .clearCookie("accessToken", baseCookieOptions)
+    .clearCookie("refreshToken", baseCookieOptions)
     .json({
       status: "success",
       message: "user Logged out",
@@ -365,6 +361,7 @@ export const resendOTP = async (req: Request, res: Response) => {
     return res.status(200).json({
       status: "true",
       msg: "OTP resent successfully",
+      otpExpiry: user.otpExpiry,
     });
   } catch (err) {
     return res.status(500).json({
@@ -399,11 +396,18 @@ export const verifyOTP = async (req: Request, res: Response) => {
       const verifiedUser = await User.findById(user._id).select(
         "-password -refreshToken -otp",
       );
-      return res.status(200).json({
-        status: "true",
-        msg: "OTP verified successfully",
-        user: verifiedUser,
-      });
+      const { accessToken, refreshToken } = await generateAccessRefershToken(
+        user._id.toString(),
+      );
+      return res
+        .status(200)
+        .cookie("accessToken", accessToken, accessCookieOptions)
+        .cookie("refreshToken", refreshToken, refreshCookieOptions)
+        .json({
+          status: "true",
+          msg: "OTP verified successfully",
+          user: verifiedUser,
+        });
     }
 
     if (!user.otp || normalizeOTP(user.otp) !== otp) {
@@ -429,11 +433,19 @@ export const verifyOTP = async (req: Request, res: Response) => {
       { new: true },
     ).select("-password -refreshToken -otp");
 
-    return res.status(200).json({
-      status: "true",
-      msg: "OTP verified successfully",
-      user: updatedUser,
-    });
+    const { accessToken, refreshToken } = await generateAccessRefershToken(
+      user._id.toString(),
+    );
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, accessCookieOptions)
+      .cookie("refreshToken", refreshToken, refreshCookieOptions)
+      .json({
+        status: "true",
+        msg: "OTP verified successfully",
+        user: updatedUser,
+      });
   } catch (err) {
     return res.status(500).json({
       status: "false",

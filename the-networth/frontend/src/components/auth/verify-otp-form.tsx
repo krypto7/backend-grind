@@ -2,80 +2,99 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { cn } from "cn";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { resendOTP, verifyOTP } from "@/lib/api";
 
-const RESEND_SECONDS = 30;
-
-function formatTime(seconds: number) {
-  return `0:${String(seconds).padStart(2, "0")}`;
+function secondsUntil(expiry?: string | null) {
+  if (!expiry) return 0;
+  const remaining = new Date(expiry).getTime() - Date.now();
+  if (Number.isNaN(remaining)) return 0;
+  return Math.max(0, Math.floor(remaining / 1000));
 }
 
-export function VerifyOtpForm({ email }: { email: string }) {
+function formatTime(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+export function VerifyOtpForm({
+  email,
+  expiresAt: initialExpiresAt,
+}: {
+  email: string;
+  expiresAt: string;
+}) {
+  const router = useRouter();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
-  const [seconds, setSeconds] = useState(RESEND_SECONDS);
+  const [expiresAt, setExpiresAt] = useState(initialExpiresAt);
+  const [seconds, setSeconds] = useState(() => secondsUntil(initialExpiresAt));
   const [resent, setResent] = useState(false);
-  const [accepted, setAccepted] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setSeconds((current) => (current > 0 ? current - 1 : 0));
+      setSeconds(secondsUntil(expiresAt));
     }, 1000);
 
     return () => window.clearInterval(id);
-  }, []);
+  }, [expiresAt]);
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (otp.length !== 6) {
       setError("Enter the 6-digit code.");
-      setAccepted(false);
       return;
     }
 
+    if (!email) {
+      setError("Go back and enter the email used to sign up.");
+      return;
+    }
+
+    setSubmitting(true);
     setError("");
-    setAccepted(true);
+
+    try {
+      await verifyOTP(email, otp);
+      router.push("/profile");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to verify OTP.");
+      setSubmitting(false);
+    }
   }
 
-  function onResend() {
-    if (seconds > 0) return;
-    setSeconds(RESEND_SECONDS);
-    setResent(true);
-    setOtp("");
+  async function onResend() {
+    if (seconds > 0 || resending || !email) return;
+
+    setResending(true);
     setError("");
-    setAccepted(false);
+
+    try {
+      const data = await resendOTP(email);
+      setExpiresAt(data.otpExpiry);
+      setSeconds(secondsUntil(data.otpExpiry));
+      setResent(true);
+      setOtp("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to resend OTP.");
+    } finally {
+      setResending(false);
+    }
   }
 
   const shownEmail = email || "your email";
-
-  if (accepted) {
-    return (
-      <div>
-        <p className="text-sm font-medium text-primary">Code received</p>
-        <h1 className="mt-2 font-serif text-3xl tracking-tight text-balance sm:text-4xl">
-          That code is complete.
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          This page only checks that six digits were entered. It does not send
-          them anywhere yet.
-        </p>
-        <Link
-          href="/sign-in"
-          className={cn(buttonVariants(), "mt-8 h-11 w-full")}
-        >
-          Back to sign in
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -97,7 +116,6 @@ export function VerifyOtpForm({ email }: { email: string }) {
             onChange={(value) => {
               setOtp(value);
               setError("");
-              setAccepted(false);
             }}
             aria-invalid={Boolean(error)}
             autoComplete="one-time-code"
@@ -120,12 +138,18 @@ export function VerifyOtpForm({ email }: { email: string }) {
 
         {resent ? (
           <p className="rounded-lg bg-secondary px-3 py-2.5 text-sm text-secondary-foreground">
-            A new code would be sent here once email is connected.
+            A new code was sent to your email.
           </p>
         ) : null}
 
-        <Button type="submit" className="h-11 w-full">
-          Verify
+        <Button
+          type="submit"
+          className="h-11 w-full"
+          disabled={submitting || resending}
+          aria-busy={submitting}
+        >
+          {submitting ? <Spinner /> : null}
+          {submitting ? "Verifying..." : "Verify"}
         </Button>
       </form>
 
@@ -133,10 +157,16 @@ export function VerifyOtpForm({ email }: { email: string }) {
         <button
           type="button"
           onClick={onResend}
-          disabled={seconds > 0}
-          className="font-medium text-foreground underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+          disabled={seconds > 0 || resending || submitting}
+          aria-busy={resending}
+          className="inline-flex items-center font-medium text-foreground underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
         >
-          {seconds > 0 ? `Resend in ${formatTime(seconds)}` : "Resend code"}
+          {resending ? <Spinner className="mr-1.5 inline size-3.5" /> : null}
+          {seconds > 0
+            ? `Resend in ${formatTime(seconds)}`
+            : resending
+              ? "Sending..."
+              : "Resend code"}
         </button>
         <Link
           href="/sign-up"

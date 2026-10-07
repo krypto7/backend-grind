@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Field, authInputClass } from "@/components/auth/field";
 import { PasswordInput } from "@/components/auth/password-input";
 import { isEmail } from "@/lib/auth-form";
-import { signinAPI } from "@/lib/apiconfig";
+import { signinAPI } from "@/lib/api";
 
 type SignInErrors = {
   email?: string;
@@ -20,6 +22,7 @@ type SignInFormData = {
 };
 
 export function SignInForm() {
+  const router = useRouter();
   const [formData, setFormData] = useState<SignInFormData | null>(null);
   const [errors, setErrors] = useState<SignInErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,10 +52,9 @@ export function SignInForm() {
     setIsSubmitting(true);
     try {
       await signinAPI({ email: email.trim(), password });
-      setMessage("Signed in successfully.");
+      router.push("/home");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to sign in.");
-    } finally {
       setIsSubmitting(false);
     }
   }
@@ -113,7 +115,13 @@ export function SignInForm() {
           </p>
         ) : null}
 
-        <Button type="submit" className="h-11 w-full" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          className="h-11 w-full"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+        >
+          {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Signing in..." : "Sign in"}
         </Button>
       </form>
