@@ -6,8 +6,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { AccountAvatar } from "@/components/app/account-avatar";
 import { Logo } from "@/components/auth/logo";
 import { Spinner } from "@/components/ui/spinner";
-import { type AccountUser } from "@/lib/api";
-import { restoreSession } from "@/lib/session";
+import { getCurrentUser, type AccountUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type AccountContextValue = {
@@ -34,14 +33,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    restoreSession()
-      .then((account) => {
-        if (!active) return;
-        if (!account) {
-          router.replace("/sign-in");
-          return;
-        }
-        setUser(account);
+    getCurrentUser()
+      .then((data) => {
+        if (active) setUser(data.user);
+      })
+      .catch(() => {
+        if (active) router.replace("/sign-in");
       })
       .finally(() => {
         if (active) setLoading(false);

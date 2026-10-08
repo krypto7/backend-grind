@@ -79,20 +79,6 @@ export const resendOTP = async (email: string) => {
   return data;
 }
 
-export const refreshSession = async () => {
-  const response = await fetch(`${baseURL}/auth/refresh`, {
-    method: "POST",
-    credentials: "include",
-  });
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.msg || "Unable to refresh session.");
-  }
-
-  return data;
-};
-
 export const getCurrentUser = async (): Promise<{ user: AccountUser }> => {
   const response = await fetch(`${baseURL}/auth/getCurrentUser`, {
     credentials: "include",
