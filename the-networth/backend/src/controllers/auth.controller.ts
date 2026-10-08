@@ -60,9 +60,11 @@ const generateAccessRefershToken = async (
       throw new Error("User not found");
     }
 
-    const accessToken = user?.generateAccessToken();
-    const refreshToken = user?.generateRefreshToken();
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
     user.refreshToken = refreshToken;
+    user.previousRefreshToken = null;
+    user.previousRefreshTokenExpiresAt = null;
     await user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
   } catch (err) {
@@ -172,7 +174,7 @@ export const login = async (
     user._id.toString(),
   );
   const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken",
+    "-password -refreshToken -previousRefreshToken -previousRefreshTokenExpiresAt",
   );
 
   return res
@@ -182,6 +184,23 @@ export const login = async (
     .json({
       status: "success",
       user: loggedInUser,
+    });
+};
+
+const REFRESH_REUSE_GRACE_MS = 30 * 1000;
+
+const refreshedSession = (
+  res: Response,
+  accessToken: string,
+  refreshToken: string,
+) => {
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, accessCookieOptions)
+    .cookie("refreshToken", refreshToken, refreshCookieOptions)
+    .json({
+      status: "true",
+      msg: "AccessToken Refreshed",
     });
 };
 
@@ -211,24 +230,48 @@ export const refreshAccessToken = async function (req: Request, res: Response) {
       });
     }
 
-    if (incomingRefreshToken !== user.refreshToken) {
-      return res.status(401).json({
-        status: "false",
-        msg: "Refresh token is expired or used",
-      });
+    const nextRefreshToken = user.generateRefreshToken();
+    const rotated = await User.findOneAndUpdate(
+      { _id: user._id, refreshToken: incomingRefreshToken },
+      {
+        $set: {
+          refreshToken: nextRefreshToken,
+          previousRefreshToken: incomingRefreshToken,
+          previousRefreshTokenExpiresAt: new Date(
+            Date.now() + REFRESH_REUSE_GRACE_MS,
+          ),
+        },
+      },
+      { new: true },
+    );
+
+    if (rotated) {
+      return refreshedSession(
+        res,
+        rotated.generateAccessToken(),
+        nextRefreshToken,
+      );
     }
 
-    const { accessToken, refreshToken: newRefreshToken } =
-      await generateAccessRefershToken(user._id.toString());
+    const current = await User.findById(user._id);
+    const previousStillValid =
+      current?.previousRefreshToken === incomingRefreshToken &&
+      current?.previousRefreshTokenExpiresAt != null &&
+      current?.previousRefreshTokenExpiresAt?.getTime() > Date.now() &&
+      Boolean(current?.refreshToken);
 
-    return res
-      .status(200)
-      .cookie("accessToken", accessToken, accessCookieOptions)
-      .cookie("refreshToken", newRefreshToken, refreshCookieOptions)
-      .json({
-        status: "true",
-        msg: "AccessToken Refreshed",
-      });
+    if (current && previousStillValid) {
+      return refreshedSession(
+        res,
+        current?.generateAccessToken(),
+        current?.refreshToken as string,
+      );
+    }
+
+    return res.status(401).json({
+      status: "false",
+      msg: "Refresh token is expired or used",
+    });
   } catch (error) {
     return res.status(401).json({
       status: "false",
@@ -254,6 +297,8 @@ export const logout = async (req: Request, res: Response) => {
     {
       $unset: {
         refreshToken: 1,
+        previousRefreshToken: 1,
+        previousRefreshTokenExpiresAt: 1,
       },
     },
     {
@@ -273,7 +318,7 @@ export const logout = async (req: Request, res: Response) => {
 
 export const getCurrentUser = async (req: Request, res: Response) => {
   const user = await User.findById(req.user?._id).select(
-    "-password -refreshToken",
+    "-password -refreshToken -previousRefreshToken -previousRefreshTokenExpiresAt",
   );
   if (!user) {
     return res.status(400).json({
@@ -394,7 +439,7 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
     if (user.isVerified) {
       const verifiedUser = await User.findById(user._id).select(
-        "-password -refreshToken -otp",
+        "-password -refreshToken -previousRefreshToken -previousRefreshTokenExpiresAt -otp",
       );
       const { accessToken, refreshToken } = await generateAccessRefershToken(
         user._id.toString(),
@@ -431,7 +476,9 @@ export const verifyOTP = async (req: Request, res: Response) => {
         $unset: { otp: 1, otpExpiry: 1 },
       },
       { new: true },
-    ).select("-password -refreshToken -otp");
+    ).select(
+      "-password -refreshToken -previousRefreshToken -previousRefreshTokenExpiresAt -otp",
+    );
 
     const { accessToken, refreshToken } = await generateAccessRefershToken(
       user._id.toString(),
@@ -454,6 +501,75 @@ export const verifyOTP = async (req: Request, res: Response) => {
   }
 };
 
-export const uploadProfileImage = async (req: Request, res: Response) => {};
-export const removeProfileImage = async (req: Request, res: Response) => {};
-export const EditProfileImage = async (req: Request, res: Response) => {};
+export const editProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const firstname = String(req.body.firstname ?? "").trim();
+    const lastname = String(req.body.lastname ?? "").trim();
+    const username = String(req.body.username ?? "").trim().toLowerCase();
+    const email = normalizeEmail(req.body.email);
+
+    if (!userId || !firstname || !lastname || !username || !email) {
+      return res.status(400).json({
+        status: "false",
+        msg: "all fields are required",
+      });
+    }
+
+    const emailTaken = await User.findOne({ email, _id: { $ne: userId } });
+    if (emailTaken) {
+      return res.status(409).json({
+        status: "false",
+        msg: "Email already in use",
+      });
+    }
+
+    const usernameTaken = await User.findOne({ username, _id: { $ne: userId } });
+    if (usernameTaken) {
+      return res.status(409).json({
+        status: "false",
+        msg: "Username already in use",
+      });
+    }
+
+    const update: {
+      firstname: string;
+      lastname: string;
+      username: string;
+      email: string;
+      avtar?: string;
+    } = { firstname, lastname, username, email };
+
+    if (req.file?.path) {
+      const avtar = await uploadOnCloudinary(req.file.path);
+
+      if (!avtar) {
+        return res.status(500).json({
+          status: "false",
+          msg: "Failed to upload avtar image",
+        });
+      }
+
+      update.avtar = avtar.url;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: update },
+      { new: true },
+    ).select(
+      "-password -refreshToken -previousRefreshToken -previousRefreshTokenExpiresAt",
+    );
+
+    return res.status(200).json({
+      status: "true",
+      msg: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: "false",
+      msg: "Internal server error",
+    });
+  }
+};

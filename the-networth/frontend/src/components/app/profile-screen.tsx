@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOutIcon } from "lucide-react";
+import { LogOutIcon, PencilIcon } from "lucide-react";
 import { AccountAvatar, displayName } from "@/components/app/account-avatar";
+import { EditProfileDialog } from "@/components/app/edit-profile-dialog";
 import { useAccount } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { logoutAPI } from "@/lib/api";
 
 export function ProfileScreen() {
-  const { user } = useAccount();
+  const { user, setUser } = useAccount();
   const router = useRouter();
+  const [editing, setEditing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
 
@@ -25,7 +27,7 @@ export function ProfileScreen() {
 
     try {
       await logoutAPI();
-      router.replace("/sign-in");
+      router.replace("/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to log out.");
       setLoggingOut(false);
@@ -50,15 +52,32 @@ export function ProfileScreen() {
             user={user}
             className="-mt-12 size-24 text-2xl ring-4 ring-card sm:-mt-14 sm:size-28"
           />
-          <h2 className="mt-4 font-serif text-3xl tracking-tight">{name}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">@{user.username}</p>
+          <div className="mt-4 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="font-serif text-3xl tracking-tight">{name}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                @{user.username}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Edit profile"
+              onClick={() => setEditing(true)}
+            >
+              <PencilIcon />
+            </Button>
+          </div>
 
           <dl className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl bg-muted/70 px-4 py-3">
               <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 Email
               </dt>
-              <dd className="mt-1 text-sm font-medium break-all">{user.email}</dd>
+              <dd className="mt-1 text-sm font-medium break-all">
+                {user.email}
+              </dd>
             </div>
             <div className="rounded-xl bg-muted/70 px-4 py-3">
               <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -89,6 +108,13 @@ export function ProfileScreen() {
           </Button>
         </div>
       </section>
+
+      <EditProfileDialog
+        user={user}
+        open={editing}
+        onOpenChange={setEditing}
+        onSaved={setUser}
+      />
     </div>
   );
 }

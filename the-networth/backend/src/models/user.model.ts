@@ -12,8 +12,11 @@ export interface User {
   avtar: string | null;
   emailVerificationToken?: string;
   refreshToken?: string | null;
+  previousRefreshToken?: string | null;
+  previousRefreshTokenExpiresAt?: Date | null;
   otp?: string | null;
   otpExpiry?: Date | null;
+  posts?: string[];
 }
 
 interface UserMethods {
@@ -61,8 +64,21 @@ const userSchema = new mongoose.Schema<User, UserModel, UserMethods>(
     refreshToken: {
       type: String,
     },
+    previousRefreshToken: {
+      type: String,
+      default: null,
+    },
+    previousRefreshTokenExpiresAt: {
+      type: Date,
+      default: null,
+    },
     emailVerificationToken: {
       type: String,
+    },
+    posts: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Post",
+      default: [],
     },
     otp: { type: String, default: null },
     otpExpiry: { type: Date, default: null },

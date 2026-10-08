@@ -25,7 +25,7 @@ export const verifyJWT = async (
     ) as jwt.JwtPayload;
 
     const user = await User.findById(decoded._id).select(
-      "-password -refreshToken",
+      "-password -refreshToken -previousRefreshToken -previousRefreshTokenExpiresAt",
     );
 
     if (!user) {

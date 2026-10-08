@@ -3,25 +3,32 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
+import { CompassIcon, HouseIcon, MessageCircleIcon, UserRoundIcon } from "lucide-react";
 import { AccountAvatar } from "@/components/app/account-avatar";
 import { Logo } from "@/components/auth/logo";
 import { Spinner } from "@/components/ui/spinner";
-import { getCurrentUser, type AccountUser } from "@/lib/api";
+import { loadAccount, type AccountUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type AccountContextValue = {
   user: AccountUser | null;
+  setUser: (user: AccountUser | null) => void;
 };
 
-const AccountContext = createContext<AccountContextValue>({ user: null });
+const AccountContext = createContext<AccountContextValue>({
+  user: null,
+  setUser: () => {},
+});
 
 export function useAccount() {
   return useContext(AccountContext);
 }
 
 const links = [
-  { href: "/home", label: "Home" },
-  { href: "/profile", label: "Profile" },
+  { href: "/home", label: "Home", icon: HouseIcon },
+  { href: "/explore", label: "Explore", icon: CompassIcon },
+  { href: "/message", label: "Message", icon: MessageCircleIcon },
+  { href: "/profile", label: "Profile", icon: UserRoundIcon },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -33,12 +40,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    getCurrentUser()
-      .then((data) => {
-        if (active) setUser(data.user);
-      })
-      .catch(() => {
-        if (active) router.replace("/sign-in");
+    loadAccount()
+      .then((account) => {
+        if (!active) return;
+        if (!account) {
+          router.replace("/");
+          return;
+        }
+        setUser(account);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -50,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   return (
-    <AccountContext.Provider value={{ user }}>
+    <AccountContext.Provider value={{ user, setUser }}>
       <div className="min-h-svh">
         <header className="sticky top-0 z-10 border-b border-border/80 bg-background/90 backdrop-blur-md">
           <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
@@ -59,19 +68,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <nav className="flex items-center gap-1">
                 {links.map((link) => {
                   const active = pathname === link.href;
+                  const Icon = link.icon;
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
+                      aria-label={link.label}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                        "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3",
                         active
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
                     >
-                      {link.label}
+                      <Icon className="size-4" />
+                      <span className="hidden md:inline">{link.label}</span>
                     </Link>
                   );
                 })}
