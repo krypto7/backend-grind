@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOutIcon, PencilIcon } from "lucide-react";
 import { AccountAvatar, displayName } from "@/components/app/account-avatar";
@@ -8,7 +8,7 @@ import { EditProfileDialog } from "@/components/app/edit-profile-dialog";
 import { useAccount } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { logoutAPI } from "@/lib/api";
+import { getUserPostAPI, logoutAPI, Post } from "@/lib/api";
 
 export function ProfileScreen() {
   const { user, setUser } = useAccount();
@@ -16,10 +16,13 @@ export function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
+  const [posts, setPosts] = useState<Post[]>([]);
 
   if (!user) return null;
 
   const name = displayName(user);
+
+  console.log("=======user", user);
 
   async function onLogout() {
     setLoggingOut(true);
@@ -33,6 +36,20 @@ export function ProfileScreen() {
       setLoggingOut(false);
     }
   }
+
+  const fetchUserPosts = async () => {
+    try {
+      const userPosts = await getUserPostAPI(user._id);
+      setPosts(userPosts);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (!user._id) return;
+    fetchUserPosts();
+  }, [user._id]);
 
   return (
     <div>
@@ -94,6 +111,36 @@ export function ProfileScreen() {
               {error}
             </p>
           ) : null}
+
+          <ul className="mt-4 grid gap-3">
+            {posts.length === 0 ? (
+              <p>No posts found.</p>
+            ) : (
+              posts.map((post) => (
+                <li
+                  key={post._id}
+                  className="rounded-2xl bg-card px-4 py-4 ring-1 ring-foreground/10 sm:px-5"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#14241f] text-xs font-medium text-[#f6f3ec]">
+                      {post.user?.firstname?.charAt(0) ?? "?"}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        @{post.user?.username}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {post.createdAt
+                          ? new Date(post.createdAt).toLocaleString()
+                          : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm leading-6">{post.content}</p>
+                </li>
+              ))
+            )}
+          </ul>
 
           <Button
             type="button"

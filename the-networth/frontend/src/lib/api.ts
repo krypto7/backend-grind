@@ -258,3 +258,14 @@ export const createPostAPI = async (content: string) => {
 
   return data as Post;
 };
+
+export const getUserPostAPI = async (userId: string) => {
+  const response = await authFetch(`${baseURL}/post/get-userPosts/${userId}`);
+  const data = await readJson(response);
+
+  if (!response.ok) {
+    throw new Error(data.msg || data.message || "Unable to get user posts.");
+  }
+
+  return data as Post[];
+};

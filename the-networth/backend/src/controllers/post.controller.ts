@@ -17,7 +17,10 @@ export const createPost = async (req: Request, res: Response) => {
     }
 
     const post = await Post.create({ content, user: user._id });
-    const created = await Post.findById(post._id).populate("user", authorFields);
+    const created = await Post.findById(post._id).populate(
+      "user",
+      authorFields,
+    );
 
     res.status(201).json(created);
   } catch (error) {
@@ -32,6 +35,19 @@ export const getPosts = async (req: Request, res: Response) => {
       .populate("user", authorFields)
       .sort({ createdAt: -1 });
     res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getUserPosts = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  console.log("Fetching posts for user ID:", req.params);
+  try {
+    const posts = await Post.find({ user: id })
+      .populate("user", authorFields)
+      .sort({ createdAt: -1 });
+    res.status(200).json(posts);  
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
