@@ -8,7 +8,52 @@ import { EditProfileDialog } from "@/components/app/edit-profile-dialog";
 import { useAccount } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { clearAccount, getUserPostAPI, logoutAPI, Post } from "@/lib/api";
+import { getUserPostAPI, logoutAPI, type Post, type PostMedia } from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+function PostPhotos({ media }: { media?: PostMedia[] }) {
+  const photos = (media ?? []).filter((item) => item.mediaUrl);
+  if (photos.length === 0) return null;
+
+  return (
+    <div
+      className={cn(
+        "mt-3 grid gap-2",
+        photos.length > 1 && "grid-cols-2",
+      )}
+    >
+      {photos.map((item, index) =>
+        item.mediaType === "video" ? (
+          <video
+            key={item.publicId ?? item.mediaUrl}
+            src={item.mediaUrl ?? ""}
+            controls
+            className={cn(
+              "w-full rounded-xl bg-[#14241f] ring-1 ring-foreground/10",
+              photos.length === 1 && "max-h-96",
+              photos.length > 1 && "aspect-square object-cover",
+              photos.length === 3 && index === 0 && "col-span-2 aspect-[2/1]",
+            )}
+          />
+        ) : (
+          // Photos are stored on Cloudinary.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={item.publicId ?? item.mediaUrl}
+            src={item.mediaUrl ?? ""}
+            alt=""
+            className={cn(
+              "w-full rounded-xl object-cover ring-1 ring-foreground/10",
+              photos.length === 1 && "max-h-96",
+              photos.length > 1 && "aspect-square",
+              photos.length === 3 && index === 0 && "col-span-2 aspect-[2/1]",
+            )}
+          />
+        ),
+      )}
+    </div>
+  );
+}
 
 export function ProfileScreen() {
   const { user, setUser } = useAccount();
@@ -17,12 +62,31 @@ export function ProfileScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoaded, setPostsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!user?._id) return;
+    let active = true;
+
+    getUserPostAPI(user._id)
+      .then((userPosts) => {
+        if (active) setPosts(userPosts);
+      })
+      .catch(() => {
+        if (active) setError("Unable to load your posts.");
+      })
+      .finally(() => {
+        if (active) setPostsLoaded(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?._id]);
 
   if (!user) return null;
 
   const name = displayName(user);
-
-  console.log("=======user", user);
 
   async function onLogout() {
     setLoggingOut(true);
@@ -30,27 +94,13 @@ export function ProfileScreen() {
 
     try {
       await logoutAPI();
-      clearAccount();
+      setUser(null);
       router.replace("/sign-in");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to log out.");
       setLoggingOut(false);
     }
   }
-
-  const fetchUserPosts = async () => {
-    try {
-      const userPosts = await getUserPostAPI(user._id);
-      setPosts(userPosts);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    if (!user._id) return;
-    fetchUserPosts();
-  }, [user._id]);
 
   return (
     <div>
@@ -113,36 +163,6 @@ export function ProfileScreen() {
             </p>
           ) : null}
 
-          <ul className="mt-4 grid gap-3">
-            {posts.length === 0 ? (
-              <p>No posts found.</p>
-            ) : (
-              posts.map((post) => (
-                <li
-                  key={post._id}
-                  className="rounded-2xl bg-card px-4 py-4 ring-1 ring-foreground/10 sm:px-5"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#14241f] text-xs font-medium text-[#f6f3ec]">
-                      {post.user?.firstname?.charAt(0) ?? "?"}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        @{post.user?.username}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {post.createdAt
-                          ? new Date(post.createdAt).toLocaleString()
-                          : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm leading-6">{post.content}</p>
-                </li>
-              ))
-            )}
-          </ul>
-
           <Button
             type="button"
             variant="destructive"
@@ -155,6 +175,40 @@ export function ProfileScreen() {
             {loggingOut ? "Logging out..." : "Log out"}
           </Button>
         </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="font-serif text-3xl tracking-tight">Posts</h2>
+        {!postsLoaded ? (
+          <p className="mt-4 text-sm text-muted-foreground">Loading posts...</p>
+        ) : posts.length === 0 ? (
+          <p className="mt-4 rounded-2xl bg-muted/70 px-5 py-8 text-sm text-muted-foreground">
+            You have not posted yet.
+          </p>
+        ) : (
+          <ul className="mt-4 grid gap-4">
+            {posts.map((post) => (
+              <li
+                key={post._id}
+                className="rounded-2xl bg-card px-4 py-4 ring-1 ring-foreground/10 sm:px-5"
+              >
+                <div className="flex items-center gap-3">
+                  <AccountAvatar user={user} className="size-10 text-sm" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">@{user.username}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {post.createdAt
+                        ? new Date(post.createdAt).toLocaleString()
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm leading-6">{post.content}</p>
+                <PostPhotos media={post.media} />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <EditProfileDialog

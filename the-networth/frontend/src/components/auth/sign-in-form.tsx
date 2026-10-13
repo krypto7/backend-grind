@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Field, authInputClass } from "@/components/auth/field";
 import { PasswordInput } from "@/components/auth/password-input";
 import { isEmail } from "@/lib/auth-form";
-import { saveAccount, signinAPI } from "@/lib/api";
+import { signinAPI } from "@/lib/api";
 
 type SignInErrors = {
   email?: string;
@@ -51,8 +51,7 @@ export function SignInForm() {
 
     setIsSubmitting(true);
     try {
-      const data = await signinAPI({ email: email.trim(), password });
-      saveAccount(data.user);
+      await signinAPI({ email: email.trim(), password });
       router.push("/home");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to sign in.");

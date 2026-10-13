@@ -1,5 +1,25 @@
 import mongoose from "mongoose";
 
+const mediaSchema = new mongoose.Schema({
+  mediaType: {
+    type: String,
+    enum: ["image", "video", "audio"],
+    default: null,
+  },
+  mediaUrl: {
+    type: String,
+    default: null,
+  },
+  publicId: {
+    type: String,
+    default: null,
+  },
+  size: {
+    type: Number,
+    default: null,
+  },
+});
+
 const postSchema = new mongoose.Schema(
   {
     content: {
@@ -11,6 +31,10 @@ const postSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    media: {
+      type: [mediaSchema],
+      default: [],
     },
   },
   {

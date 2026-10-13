@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { CompassIcon, HouseIcon, MessageCircleIcon, UserRoundIcon } from "lucide-react";
+import {
+  CompassIcon,
+  HouseIcon,
+  MessageCircleIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import { AccountAvatar } from "@/components/app/account-avatar";
 import { Logo } from "@/components/auth/logo";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  clearAccount,
-  readAccount,
-  saveAccount,
-  type AccountUser,
-} from "@/lib/api";
+import { loadAccount, type AccountUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type AccountContextValue = {
@@ -39,23 +39,28 @@ const links = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUserState] = useState<AccountUser | null>(null);
+  const [user, setUser] = useState<AccountUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  function setUser(next: AccountUser | null) {
-    setUserState(next);
-    if (next) saveAccount(next);
-    else clearAccount();
-  }
-
   useEffect(() => {
-    const saved = readAccount();
-    if (!saved) {
-      router.replace("/sign-in");
-      return;
-    }
-    setUserState(saved);
-    setLoading(false);
+    let active = true;
+
+    loadAccount()
+      .then((account) => {
+        if (!active) return;
+        if (!account) {
+          router.replace("/sign-in");
+          return;
+        }
+        setUser(account);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   return (

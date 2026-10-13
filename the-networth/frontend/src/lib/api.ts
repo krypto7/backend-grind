@@ -1,4 +1,4 @@
-const baseURL = "http://localhost:8000/api";
+const baseURL = "/api";
 
 export type AccountUser = {
   _id: string;
@@ -10,27 +10,6 @@ export type AccountUser = {
   isVerified?: boolean;
   createdAt?: string;
 };
-
-const ACCOUNT_KEY = "account";
-
-export function saveAccount(user: AccountUser) {
-  localStorage.setItem(ACCOUNT_KEY, JSON.stringify(user));
-}
-
-export function readAccount(): AccountUser | null {
-  const raw = localStorage.getItem(ACCOUNT_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as AccountUser;
-  } catch {
-    return null;
-  }
-}
-
-export function clearAccount() {
-  localStorage.removeItem(ACCOUNT_KEY);
-}
 
 export const signinAPI = async (formData: {
   email: string;
@@ -100,19 +79,91 @@ export const resendOTP = async (email: string) => {
   return data;
 };
 
+class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+const REFRESH_LOCK = "networth-auth-refresh";
+
+let refreshRequest: Promise<boolean> | null = null;
+let accountRequest: Promise<AccountUser | null> | null = null;
+
 async function readJson(response: Response) {
   return response.json().catch(() => ({}));
 }
 
-function apiFetch(input: string, init?: RequestInit) {
-  return fetch(input, {
+async function refreshAccessToken() {
+  const response = await fetch(`${baseURL}/auth/refresh`, {
+    credentials: "include",
+  });
+  return response.ok;
+}
+
+function refreshSession() {
+  if (!refreshRequest) {
+    const refresh = () =>
+      typeof navigator !== "undefined" && navigator.locks
+        ? navigator.locks.request(REFRESH_LOCK, refreshAccessToken)
+        : refreshAccessToken();
+
+    refreshRequest = refresh().finally(() => {
+      refreshRequest = null;
+    });
+  }
+
+  return refreshRequest;
+}
+
+async function authFetch(input: string, init?: RequestInit, retried = false) {
+  const response = await fetch(input, {
     ...init,
     credentials: "include",
   });
+
+  if (response.status !== 401 || retried || input.includes("/auth/refresh")) {
+    return response;
+  }
+
+  const refreshed = await refreshSession();
+  if (!refreshed) return response;
+  return authFetch(input, init, true);
+}
+
+export const getCurrentUser = async () => {
+  const response = await authFetch(`${baseURL}/auth/getCurrentUser`);
+  const data = await readJson(response);
+
+  if (!response.ok) {
+    throw new ApiError(
+      data.msg || "Unable to load your account.",
+      response.status,
+    );
+  }
+
+  return data as { user: AccountUser };
+};
+
+export function loadAccount() {
+  if (!accountRequest) {
+    accountRequest = getCurrentUser()
+      .then((data) => data.user)
+      .catch(() => null)
+      .finally(() => {
+        accountRequest = null;
+      });
+  }
+
+  return accountRequest;
 }
 
 export const editProfileAPI = async (formData: FormData) => {
-  const response = await apiFetch(`${baseURL}/auth/edit-profile`, {
+  const response = await authFetch(`${baseURL}/auth/edit-profile`, {
     method: "PATCH",
     body: formData,
   });
@@ -126,7 +177,7 @@ export const editProfileAPI = async (formData: FormData) => {
 };
 
 export const logoutAPI = async () => {
-  const response = await apiFetch(`${baseURL}/auth/logout`);
+  const response = await authFetch(`${baseURL}/auth/logout`);
   const data = await readJson(response);
 
   if (!response.ok) {
@@ -147,10 +198,17 @@ export type PostAuthor = {
   createdAt?: string;
 };
 
+export type PostMedia = {
+  mediaType?: "image" | "video" | "audio" | null;
+  mediaUrl?: string | null;
+  publicId?: string | null;
+};
+
 export type Post = {
   _id: string;
   content: string;
   user: PostAuthor;
+  media?: PostMedia[];
   createdAt?: string;
 };
 
@@ -165,13 +223,14 @@ export const getPostsAPI = async () => {
   return data as Post[];
 };
 
-export const createPostAPI = async (content: string) => {
-  const response = await apiFetch(`${baseURL}/post/create-post`, {
+export const createPostAPI = async (content: string, media: File[] = []) => {
+  const formData = new FormData();
+  formData.append("content", content);
+  media.forEach((file) => formData.append("media", file));
+
+  const response = await authFetch(`${baseURL}/post/create-post`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ content }),
+    body: formData,
   });
   const data = await readJson(response);
 
@@ -183,7 +242,7 @@ export const createPostAPI = async (content: string) => {
 };
 
 export const getUserPostAPI = async (userId: string) => {
-  const response = await apiFetch(`${baseURL}/post/get-userPosts/${userId}`);
+  const response = await authFetch(`${baseURL}/post/get-userPosts/${userId}`);
   const data = await readJson(response);
 
   if (!response.ok) {
