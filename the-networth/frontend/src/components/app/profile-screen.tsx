@@ -8,7 +8,7 @@ import { EditProfileDialog } from "@/components/app/edit-profile-dialog";
 import { useAccount } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { getUserPostAPI, logoutAPI, Post } from "@/lib/api";
+import { clearAccount, getUserPostAPI, logoutAPI, Post } from "@/lib/api";
 
 export function ProfileScreen() {
   const { user, setUser } = useAccount();
@@ -30,7 +30,8 @@ export function ProfileScreen() {
 
     try {
       await logoutAPI();
-      router.replace("/home");
+      clearAccount();
+      router.replace("/sign-in");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to log out.");
       setLoggingOut(false);

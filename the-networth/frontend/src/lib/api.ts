@@ -1,15 +1,5 @@
 const baseURL = "http://localhost:8000/api";
 
-export class ApiError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-  }
-}
-
 export type AccountUser = {
   _id: string;
   firstname: string;
@@ -20,6 +10,27 @@ export type AccountUser = {
   isVerified?: boolean;
   createdAt?: string;
 };
+
+const ACCOUNT_KEY = "account";
+
+export function saveAccount(user: AccountUser) {
+  localStorage.setItem(ACCOUNT_KEY, JSON.stringify(user));
+}
+
+export function readAccount(): AccountUser | null {
+  const raw = localStorage.getItem(ACCOUNT_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as AccountUser;
+  } catch {
+    return null;
+  }
+}
+
+export function clearAccount() {
+  localStorage.removeItem(ACCOUNT_KEY);
+}
 
 export const signinAPI = async (formData: {
   email: string;
@@ -89,107 +100,19 @@ export const resendOTP = async (email: string) => {
   return data;
 };
 
-const REFRESH_LOCK = "networth-auth-refresh";
-
-let refreshRequest: Promise<boolean> | null = null;
-let accountRequest: Promise<AccountUser | null> | null = null;
-
 async function readJson(response: Response) {
   return response.json().catch(() => ({}));
 }
 
-async function refreshAccessToken() {
-  const response = await fetch(`${baseURL}/auth/refresh`, {
-    credentials: "include",
-  });
-  return response.ok;
-}
-
-async function accessCookieWorks(): Promise<boolean | null> {
-  const response = await fetch(`${baseURL}/auth/getCurrentUser`, {
-    credentials: "include",
-  });
-  if (response.ok) return true;
-  if (response.status === 401) return false;
-  return null;
-}
-
-async function refreshAfterWaiting(): Promise<boolean> {
-  const accessCookieValid = await accessCookieWorks();
-  if (accessCookieValid === true) return true;
-  if (accessCookieValid === null) return false;
-  return refreshAccessToken();
-}
-
-function refreshSession(): Promise<boolean> {
-  if (!refreshRequest) {
-    const run =
-      typeof navigator !== "undefined" && navigator.locks
-        ? navigator.locks.request(REFRESH_LOCK, refreshAfterWaiting)
-        : refreshAfterWaiting();
-
-    refreshRequest = run.finally(() => {
-      refreshRequest = null;
-    });
-  }
-
-  return refreshRequest;
-}
-
-export async function authFetch(
-  input: string,
-  init?: RequestInit,
-  retried = false,
-): Promise<Response> {
-  const response = await fetch(input, {
+function apiFetch(input: string, init?: RequestInit) {
+  return fetch(input, {
     ...init,
     credentials: "include",
   });
-
-  if (response.status !== 401 || retried || input.includes("/auth/refresh")) {
-    return response;
-  }
-
-  const refreshed = await refreshSession();
-  if (!refreshed) return response;
-  return authFetch(input, init, true);
-}
-
-export const getCurrentUser = async (): Promise<{ user: AccountUser }> => {
-  const response = await authFetch(`${baseURL}/auth/getCurrentUser`);
-  const data = await readJson(response);
-
-  if (!response.ok) {
-    throw new ApiError(
-      data.msg || "Unable to load your account.",
-      response.status,
-    );
-  }
-
-  return data;
-};
-
-async function readAccount(): Promise<AccountUser | null> {
-  try {
-    const current = await getCurrentUser();
-    return current.user;
-  } catch {
-    return null;
-  }
-}
-
-export function loadAccount(): Promise<AccountUser | null> {
-  if (!accountRequest) {
-    accountRequest = readAccount().finally(() => {
-      accountRequest = null;
-    });
-  }
-
-  return accountRequest;
 }
 
 export const editProfileAPI = async (formData: FormData) => {
-  const response = await authFetch(`${baseURL}/auth/edit-profile`, {
+  const response = await apiFetch(`${baseURL}/auth/edit-profile`, {
     method: "PATCH",
     body: formData,
   });
@@ -203,7 +126,7 @@ export const editProfileAPI = async (formData: FormData) => {
 };
 
 export const logoutAPI = async () => {
-  const response = await authFetch(`${baseURL}/auth/logout`);
+  const response = await apiFetch(`${baseURL}/auth/logout`);
   const data = await readJson(response);
 
   if (!response.ok) {
@@ -243,7 +166,7 @@ export const getPostsAPI = async () => {
 };
 
 export const createPostAPI = async (content: string) => {
-  const response = await authFetch(`${baseURL}/post/create-post`, {
+  const response = await apiFetch(`${baseURL}/post/create-post`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -260,7 +183,7 @@ export const createPostAPI = async (content: string) => {
 };
 
 export const getUserPostAPI = async (userId: string) => {
-  const response = await authFetch(`${baseURL}/post/get-userPosts/${userId}`);
+  const response = await apiFetch(`${baseURL}/post/get-userPosts/${userId}`);
   const data = await readJson(response);
 
   if (!response.ok) {

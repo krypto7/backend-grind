@@ -11,7 +11,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { resendOTP, verifyOTP } from "@/lib/api";
+import { resendOTP, saveAccount, verifyOTP } from "@/lib/api";
 
 function secondsUntil(expiry?: string | null) {
   if (!expiry) return 0;
@@ -67,7 +67,8 @@ export function VerifyOtpForm({
     setError("");
 
     try {
-      await verifyOTP(email, otp);
+      const data = await verifyOTP(email, otp);
+      if (data.user) saveAccount(data.user);
       router.push("/profile");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to verify OTP.");
