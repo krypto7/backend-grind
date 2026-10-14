@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageIcon, PlayIcon, SendIcon, XIcon } from "lucide-react";
+import {
+  HeartIcon,
+  ImageIcon,
+  MessageCircleIcon,
+  PlayIcon,
+  SendIcon,
+  ShareIcon,
+  XIcon,
+} from "lucide-react";
 import { AccountAvatar } from "@/components/app/account-avatar";
 import { useAccount } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
@@ -347,6 +355,17 @@ export function HomeScreen() {
                   )}
                 </div>
               ) : null}
+              <div className="flex gap-2 pt-3">
+                <Button variant="ghost" size="sm">
+                  <HeartIcon />
+                </Button>
+                <Button variant="ghost" size="sm">
+                  <MessageCircleIcon />
+                </Button>
+                <Button variant="ghost" size="sm">
+                  <ShareIcon />
+                </Button>
+              </div>
             </li>
           );
         })}

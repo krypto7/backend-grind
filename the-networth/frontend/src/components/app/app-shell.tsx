@@ -84,7 +84,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <div>
             <div className="flex h-14 items-center px-3">
-              <Logo nameClassName={messagesOpen ? "hidden" : "hidden xl:inline"} />
+              <Logo
+                nameClassName={messagesOpen ? "hidden" : "hidden xl:inline"}
+              />
             </div>
             <nav className="mt-1 flex flex-col">
               {links.map((link) => {
@@ -104,7 +106,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     )}
                   >
                     <Icon className="size-6 shrink-0" />
-                    <span className={cn("hidden", !messagesOpen && "xl:inline")}>
+                    <span
+                      className={cn("hidden", !messagesOpen && "xl:inline")}
+                    >
                       {link.label}
                     </span>
                   </Link>
@@ -119,7 +123,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 !messagesOpen && "xl:mx-1 xl:h-12 xl:w-full",
               )}
             >
-              <SquarePenIcon className={cn("size-5", !messagesOpen && "xl:hidden")} />
+              <SquarePenIcon
+                className={cn("size-5", !messagesOpen && "xl:hidden")}
+              />
               <span className={cn("hidden", !messagesOpen && "xl:inline")}>
                 Post
               </span>
@@ -132,7 +138,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-3 rounded-full p-3 transition-colors hover:bg-muted"
             >
               <AccountAvatar user={user} className="size-10 shrink-0 text-sm" />
-              <span className={cn("hidden min-w-0", !messagesOpen && "xl:block")}>
+              <span
+                className={cn("hidden min-w-0", !messagesOpen && "xl:block")}
+              >
                 <span className="block truncate text-sm font-semibold">
                   {displayName(user)}
                 </span>
@@ -144,7 +152,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </aside>
 
-        <div className={cn("flex min-w-0 flex-1", !messagesOpen && "xl:flex-none")}>
+        <div
+          className={cn("flex min-w-0 flex-1", !messagesOpen && "xl:flex-none")}
+        >
           <main
             className={cn(
               "min-h-svh w-full min-w-0 border-x border-border px-4 py-4 pb-24 md:pb-4",
@@ -166,39 +176,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
 
           {messagesOpen ? null : (
-          <aside className="sticky top-0 hidden h-svh w-[350px] shrink-0 flex-col gap-4 overflow-y-auto px-6 py-3 xl:flex">
-            <label className="sticky top-0 z-10 bg-background py-1">
-              <span className="sr-only">Search</span>
-              <input
-                type="search"
-                placeholder="Search"
-                className="h-11 w-full rounded-full bg-muted px-4 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </label>
-            <section className="rounded-2xl bg-muted/70 p-4">
-              <h2 className="font-serif text-xl">Topics</h2>
-              <ul className="mt-3 grid gap-2">
-                {topics.map((topic) => (
-                  <li key={topic} className="text-sm font-medium">
-                    {topic}
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <section className="rounded-2xl bg-muted/70 p-4">
-              <h2 className="font-serif text-xl">People</h2>
-              <ul className="mt-3 grid gap-3">
-                {people.map((person) => (
-                  <li key={person.username}>
-                    <p className="text-sm font-medium">@{person.username}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {person.note}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </aside>
+            <aside className="sticky top-0 hidden h-svh w-[350px] shrink-0 flex-col gap-4 overflow-y-auto px-6 py-3 xl:flex">
+              <div>
+                <label className="sticky top-0 z-10 bg-background py-1">
+                  <span className="sr-only">Search</span>
+                  <input
+                    type="search"
+                    placeholder="Search"
+                    className="h-11 w-full rounded-full bg-muted px-4 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </label>
+              </div>
+
+              <section className="rounded-2xl bg-muted/70 p-4">
+                <h2 className="font-serif text-xl">Topics</h2>
+                <ul className="mt-3 grid gap-2">
+                  {topics.map((topic) => (
+                    <li key={topic} className="text-sm font-medium">
+                      {topic}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+              <section className="rounded-2xl bg-muted/70 p-4">
+                <h2 className="font-serif text-xl">People</h2>
+                <ul className="mt-3 grid gap-3">
+                  {people.map((person) => (
+                    <li key={person.username}>
+                      <p className="text-sm font-medium">@{person.username}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {person.note}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </aside>
           )}
         </div>
 

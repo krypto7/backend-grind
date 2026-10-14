@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Post from "../models/post.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import mongoose from "mongoose";
 
 const authorFields = "username firstname lastname avtar";
 
@@ -63,6 +64,13 @@ export const getPosts = async (req: Request, res: Response) => {
   try {
     const posts = await Post.find()
       .populate("user", authorFields)
+      .populate({
+        path: "comments",
+        populate: {
+          path: "user",
+          select: "username firstname lastname avatar",
+        },
+      })
       .sort({ createdAt: -1 });
     res.status(200).json(posts);
   } catch (error) {
@@ -81,4 +89,22 @@ export const getUserPosts = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
+};
+
+export const postDetails = async (req: Request, res: Response) => {
+  const { postId }: { postId?: string } = req.params;
+
+  if (!postId || !postId.trim()) {
+    return res.status(400).json({ message: "Post ID is required" });
+  }
+
+  if (!mongoose.isValidObjectId(postId)) {
+    return res.status(400).json({ message: "Invalid post ID" });
+  }
+
+  const postDetails = await Post.findById(postId).populate(
+    "user",
+    authorFields,
+  );
+  res.status(200).json(postDetails);
 };

@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.routes.js";
 import cors from "cors";
 import postRouter from "./routes/post.routes.js";
+import commentRouter from "./routes/comments.routes.js";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
 app.use("/api/post", postRouter);
+app.use("/api/comment", commentRouter);
 
 app.get("/me", (req, res) => {
   res.status(200).json({
