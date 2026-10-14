@@ -68,7 +68,7 @@ export const getPosts = async (req: Request, res: Response) => {
         path: "comments",
         populate: {
           path: "user",
-          select: "username firstname lastname avatar",
+          select: "username firstname lastname avtar",
         },
       })
       .sort({ createdAt: -1 });
