@@ -193,7 +193,7 @@ export function HomeScreen() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="w-full">
       <p className="text-sm font-medium text-primary">Home</p>
       <h1 className="mt-2 font-serif text-4xl tracking-tight">Your feed</h1>
 

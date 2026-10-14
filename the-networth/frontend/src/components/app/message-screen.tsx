@@ -28,11 +28,11 @@ export function MessageScreen() {
     threads.find((thread) => thread.username === activeUsername) ?? threads[0];
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="flex min-h-[calc(100svh-2rem)] w-full flex-col">
       <p className="text-sm font-medium text-primary">Message</p>
       <h1 className="mt-2 font-serif text-4xl tracking-tight">Conversations</h1>
 
-      <div className="mt-8 overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10 md:grid md:min-h-[28rem] md:grid-cols-[16rem_minmax(0,1fr)]">
+      <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10 md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
         <ul className="border-b border-border/80 md:border-r md:border-b-0">
           {threads.map((thread) => (
             <li key={thread.username}>
@@ -61,7 +61,7 @@ export function MessageScreen() {
           ))}
         </ul>
 
-        <section className="flex min-h-80 flex-col px-5 py-5">
+        <section className="flex min-h-80 flex-1 flex-col px-5 py-5">
           <p className="text-sm font-medium">@{active.username}</p>
           <div className="mt-6 flex flex-1 flex-col justify-end gap-3">
             <p className="max-w-sm self-start rounded-2xl rounded-bl-md bg-muted px-4 py-3 text-sm leading-6">

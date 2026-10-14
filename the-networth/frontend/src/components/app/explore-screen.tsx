@@ -9,7 +9,7 @@ const topics = ["Design", "Notes", "Cities", "Work"];
 
 export function ExploreScreen() {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="w-full">
       <p className="text-sm font-medium text-primary">Explore</p>
       <h1 className="mt-2 font-serif text-4xl tracking-tight">Find people and notes</h1>
 

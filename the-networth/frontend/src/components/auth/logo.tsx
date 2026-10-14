@@ -1,6 +1,12 @@
 import { cn } from "cn";
 
-export function Logo({ tone = "dark" }: { tone?: "dark" | "light" }) {
+export function Logo({
+  tone = "dark",
+  nameClassName,
+}: {
+  tone?: "dark" | "light";
+  nameClassName?: string;
+}) {
   const light = tone === "light";
 
   return (
@@ -19,6 +25,7 @@ export function Logo({ tone = "dark" }: { tone?: "dark" | "light" }) {
         className={cn(
           "text-[15px] font-semibold tracking-tight",
           light ? "text-[#f6f3ec]" : "text-foreground",
+          nameClassName,
         )}
       >
         Networth
