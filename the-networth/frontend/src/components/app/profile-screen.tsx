@@ -8,20 +8,21 @@ import { EditProfileDialog } from "@/components/app/edit-profile-dialog";
 import { useAccount } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { getUserPostAPI, logoutAPI, type Post, type PostMedia } from "@/lib/api";
+import {
+  getUserPostAPI,
+  logoutAPI,
+  type Post,
+  type PostMedia,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
+import Posts from "./posts";
 
 function PostPhotos({ media }: { media?: PostMedia[] }) {
   const photos = (media ?? []).filter((item) => item.mediaUrl);
   if (photos.length === 0) return null;
 
   return (
-    <div
-      className={cn(
-        "mt-3 grid gap-2",
-        photos.length > 1 && "grid-cols-2",
-      )}
-    >
+    <div className={cn("mt-3 grid gap-2", photos.length > 1 && "grid-cols-2")}>
       {photos.map((item, index) =>
         item.mediaType === "video" ? (
           <video
@@ -192,19 +193,7 @@ export function ProfileScreen() {
                 key={post._id}
                 className="rounded-2xl bg-card px-4 py-4 ring-1 ring-foreground/10 sm:px-5"
               >
-                <div className="flex items-center gap-3">
-                  <AccountAvatar user={user} className="size-10 text-sm" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">@{user.username}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {post.createdAt
-                        ? new Date(post.createdAt).toLocaleString()
-                        : ""}
-                    </p>
-                  </div>
-                </div>
-                <p className="mt-3 text-sm leading-6">{post.content}</p>
-                <PostPhotos media={post.media} />
+                <Posts post={post} currentUserId={user._id} />
               </li>
             ))}
           </ul>

@@ -13,5 +13,4 @@ router.route("/get-userPosts/:id").get(verifyJWT, postController.getUserPosts);
 router
   .route("/post-details/:postId")
   .get(verifyJWT, postController.postDetails);
-
 export default router;

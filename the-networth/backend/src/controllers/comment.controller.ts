@@ -82,6 +82,12 @@ export const deleteComment = async (req: Request, res: Response) => {
 
   const comment = await Comment.findById(commentId);
 
+  const userId = req.user?._id;
+
+  if (userId?.toString() !== comment?.user.toString()) {
+    return res.status(403).json({ message: "Unauthorized" });
+  }
+
   if (!comment) {
     return res.status(404).json({
       message: "Comment not found",

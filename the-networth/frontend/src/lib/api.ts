@@ -204,11 +204,22 @@ export type PostMedia = {
   publicId?: string | null;
 };
 
+export type PostComment = {
+  _id: string;
+  content: string;
+  user: Pick<
+    PostAuthor,
+    "_id" | "firstname" | "lastname" | "username" | "avtar" | "email"
+  >;
+  createdAt?: string;
+};
+
 export type Post = {
   _id: string;
   content: string;
   user: PostAuthor;
   media?: PostMedia[];
+  comments?: PostComment[];
   createdAt?: string;
 };
 
@@ -250,4 +261,21 @@ export const getUserPostAPI = async (userId: string) => {
   }
 
   return data as Post[];
+};
+
+export const getPostDetailsAPI = async (postId: string) => {
+  try {
+    const response = await authFetch(`${baseURL}/post/post-details/${postId}`);
+    const data = await readJson(response);
+
+    if (!response.ok) {
+      throw new Error(
+        data.msg || data.message || "Unable to get post details.",
+      );
+    }
+
+    return data as Post;
+  } catch (error) {
+    throw new Error("An error occurred while fetching post details.");
+  }
 };

@@ -102,9 +102,14 @@ export const postDetails = async (req: Request, res: Response) => {
     return res.status(400).json({ message: "Invalid post ID" });
   }
 
-  const postDetails = await Post.findById(postId).populate(
-    "user",
-    authorFields,
-  );
+  const postDetails = await Post.findById(postId)
+    .populate("user", authorFields)
+    .populate({
+      path: "comments",
+      populate: {
+        path: "user",
+        select: "username firstname lastname avtar",
+      },
+    });
   res.status(200).json(postDetails);
 };
