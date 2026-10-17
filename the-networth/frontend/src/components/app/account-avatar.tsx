@@ -19,11 +19,12 @@ export function AccountAvatar({
   className?: string;
 }) {
   if (user.avtar) {
+    console.log("======", user.avtar);
     return (
       // Profile photos are stored on Cloudinary.
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={user.avtar}
+        src={user?.avtar}
         alt=""
         className={cn("rounded-full object-cover", className)}
       />

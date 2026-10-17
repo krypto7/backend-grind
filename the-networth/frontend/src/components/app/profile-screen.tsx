@@ -193,7 +193,7 @@ export function ProfileScreen() {
                 key={post._id}
                 className="rounded-2xl bg-card px-4 py-4 ring-1 ring-foreground/10 sm:px-5"
               >
-                <Posts post={post} currentUserId={user._id} />
+                <Posts post={post} />
               </li>
             ))}
           </ul>

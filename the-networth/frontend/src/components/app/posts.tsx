@@ -1,13 +1,17 @@
 import { AccountAvatar } from "@/components/app/account-avatar";
 import { Button } from "@/components/ui/button";
-import { HeartIcon, MessageCircleIcon, ShareIcon } from "lucide-react";
+import {
+  Ellipsis,
+  HeartIcon,
+  MessageCircleIcon,
+  ShareIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Post, PostMedia } from "@/lib/api";
 import { cn } from "cn";
 
 type PostCardProps = {
   post: Post;
-  currentUserId: string;
 };
 
 function PostPhotos({ media }: { media?: PostMedia[] }) {
@@ -49,25 +53,28 @@ function PostPhotos({ media }: { media?: PostMedia[] }) {
   );
 }
 
-function Posts({ post, currentUserId }: PostCardProps) {
-  const mine = post.user?._id === currentUserId;
+function Posts({ post }: PostCardProps) {
   const router = useRouter();
 
   return (
     <div>
-      <div className="flex items-center gap-3">
-        {mine ? (
-          <AccountAvatar user={post.user} className="size-10 text-sm" />
-        ) : (
-          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#14241f] text-xs font-medium text-[#f6f3ec]">
-            {post.user?.firstname?.charAt(0) ?? "?"}
-          </span>
-        )}
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">@{post.user?.username}</p>
-          <p className="text-xs text-muted-foreground">
-            {post.createdAt ? new Date(post.createdAt).toLocaleString() : ""}
-          </p>
+      <div className="flex items-center gap-3 justify-between">
+        <div className="flex gap-4">
+          <AccountAvatar
+            user={post.user}
+            className="size-10 shrink-0 text-sm"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">
+              @{post.user?.username}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {post.createdAt ? new Date(post.createdAt).toLocaleString() : ""}
+            </p>
+          </div>
+        </div>
+        <div>
+          <Ellipsis />
         </div>
       </div>
       <p className="mt-3 text-sm leading-6">{post.content}</p>
@@ -85,7 +92,8 @@ function Posts({ post, currentUserId }: PostCardProps) {
           size="sm"
           onClick={() => router.push(`/post/${post._id}`)}
         >
-          <MessageCircleIcon />1
+          <MessageCircleIcon />
+          {post.comments?.length}
         </Button>
         <Button variant="ghost" size="sm">
           <ShareIcon />

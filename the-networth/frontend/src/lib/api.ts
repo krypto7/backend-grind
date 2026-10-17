@@ -107,10 +107,15 @@ async function refreshAccessToken() {
 
 function refreshSession() {
   if (!refreshRequest) {
-    const refresh = () =>
-      typeof navigator !== "undefined" && navigator.locks
-        ? navigator.locks.request(REFRESH_LOCK, refreshAccessToken)
-        : refreshAccessToken();
+    const refresh = async () => {
+      if (typeof navigator !== "undefined" && navigator.locks) {
+        return await navigator.locks.request(REFRESH_LOCK, async () =>
+          refreshAccessToken(),
+        );
+      }
+
+      return refreshAccessToken();
+    };
 
     refreshRequest = refresh().finally(() => {
       refreshRequest = null;
@@ -210,7 +215,7 @@ export type PostComment = {
   user: Pick<
     PostAuthor,
     "_id" | "firstname" | "lastname" | "username" | "avtar" | "email"
-  >;
+  > | null;
   createdAt?: string;
 };
 
@@ -279,3 +284,22 @@ export const getPostDetailsAPI = async (postId: string) => {
     throw new Error("An error occurred while fetching post details.");
   }
 };
+
+export const addCommentAPI = async (postId: string, content: string) => {
+  const response = await authFetch(`${baseURL}/comment/add-comment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ postId, content }),
+  });
+  const data = await readJson(response);
+
+  if (!response.ok) {
+    throw new Error(data.msg || data.message || "Unable to add comment.");
+  }
+
+  return data as {
+    comment: Pick<PostComment, "_id" | "content" | "createdAt">;
+  };
+};
+
+export const editCommentAPI = async()
