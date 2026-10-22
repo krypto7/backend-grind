@@ -36,6 +36,13 @@ const postSchema = new mongoose.Schema(
       type: [mediaSchema],
       default: [],
     },
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Like",
+        default: null,
+      },
+    ],
   },
   {
     timestamps: true,

@@ -302,4 +302,4 @@ export const addCommentAPI = async (postId: string, content: string) => {
   };
 };
 
-export const editCommentAPI = async()
+// export const editCommentAPI = async()

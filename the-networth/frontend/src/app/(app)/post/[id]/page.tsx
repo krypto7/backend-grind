@@ -19,7 +19,8 @@ export default function PostDataDetails() {
   const [commentError, setCommentError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
-  const [isEdit, setEdit] = useState<boolean>(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentDraft, setEditingCommentDraft] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -87,6 +88,22 @@ export default function PostDataDetails() {
       );
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleSaveEditedComment = () => {
+    if (editingCommentId && editingCommentDraft.trim() && postData) {
+      setPostData((currentPost) => {
+        if (!currentPost) return currentPost;
+        const updatedComments = currentPost.comments?.map((comment) =>
+          comment._id === editingCommentId
+            ? { ...comment, content: editingCommentDraft }
+            : comment,
+        );
+        return { ...currentPost, comments: updatedComments };
+      });
+      setEditingCommentId(null);
+      setEditingCommentDraft("");
     }
   };
 
@@ -218,7 +235,14 @@ export default function PostDataDetails() {
                               {user && comment.user?._id === user._id && (
                                 <>
                                   <li>
-                                    <button className="w-full rounded-md px-3 py-2 text-left hover:bg-muted">
+                                    <button
+                                      className="w-full rounded-md px-3 py-2 text-left hover:bg-muted"
+                                      onClick={() => {
+                                        setEditingCommentId(comment._id);
+                                        setEditingCommentDraft(comment.content);
+                                        setOpenCommentId(null);
+                                      }}
+                                    >
                                       Edit
                                     </button>
                                   </li>
@@ -241,10 +265,38 @@ export default function PostDataDetails() {
                       </div>
                     </div>
 
-                    {}
-                    <p className="mt-3 pl-[52px] text-sm leading-6">
-                      {comment.content}
-                    </p>
+                    {editingCommentId === comment._id ? (
+                      <div>
+                        <textarea
+                          value={editingCommentDraft}
+                          onChange={(e) =>
+                            setEditingCommentDraft(e.target.value)
+                          }
+                          className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm leading-6 outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        <div className="mt-2 flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingCommentId(null);
+                              setEditingCommentDraft("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button size="sm" onClick={handleSaveEditedComment}>
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="mt-3 pl-[52px] text-sm leading-6">
+                          {comment.content}
+                        </p>
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
