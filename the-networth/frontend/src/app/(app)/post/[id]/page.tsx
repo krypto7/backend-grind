@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AccountAvatar } from "@/components/app/account-avatar";
-import { addCommentAPI, getPostDetailsAPI, Post } from "@/lib/api";
+import {
+  addCommentAPI,
+  editCommentAPI,
+  getPostDetailsAPI,
+  Post,
+} from "@/lib/api";
 import { useParams } from "next/navigation";
 import { Ellipsis, Send, UserRound } from "lucide-react";
 import Posts from "@/components/app/posts";
@@ -21,6 +26,8 @@ export default function PostDataDetails() {
   const [loading, setLoading] = useState(true);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentDraft, setEditingCommentDraft] = useState("");
+  const [isSavingComment, setIsSavingComment] = useState(false);
+  const [editCommentError, setEditCommentError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -91,19 +98,37 @@ export default function PostDataDetails() {
     }
   };
 
-  const handleSaveEditedComment = () => {
-    if (editingCommentId && editingCommentDraft.trim() && postData) {
+  const handleSaveEditedComment = async () => {
+    const commentId = editingCommentId;
+    const content = editingCommentDraft.trim();
+
+    if (!commentId || !content || !postData || isSavingComment) return;
+
+    setIsSavingComment(true);
+    setEditCommentError(null);
+
+    try {
+      const { comment: updatedComment } = await editCommentAPI(
+        commentId,
+        content,
+      );
       setPostData((currentPost) => {
         if (!currentPost) return currentPost;
         const updatedComments = currentPost.comments?.map((comment) =>
-          comment._id === editingCommentId
-            ? { ...comment, content: editingCommentDraft }
+          comment._id === commentId
+            ? { ...comment, ...updatedComment }
             : comment,
         );
         return { ...currentPost, comments: updatedComments };
       });
       setEditingCommentId(null);
       setEditingCommentDraft("");
+    } catch (error) {
+      setEditCommentError(
+        error instanceof Error ? error.message : "Unable to edit comment.",
+      );
+    } finally {
+      setIsSavingComment(false);
     }
   };
 
@@ -240,6 +265,7 @@ export default function PostDataDetails() {
                                       onClick={() => {
                                         setEditingCommentId(comment._id);
                                         setEditingCommentDraft(comment.content);
+                                        setEditCommentError(null);
                                         setOpenCommentId(null);
                                       }}
                                     >
@@ -269,24 +295,44 @@ export default function PostDataDetails() {
                       <div>
                         <textarea
                           value={editingCommentDraft}
+                          aria-label="Edit comment"
+                          disabled={isSavingComment}
                           onChange={(e) =>
                             setEditingCommentDraft(e.target.value)
                           }
                           className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm leading-6 outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                         />
+                        {editCommentError && (
+                          <p
+                            role="alert"
+                            className="mt-2 text-sm text-destructive"
+                          >
+                            {editCommentError}
+                          </p>
+                        )}
                         <div className="mt-2 flex justify-end gap-2">
                           <Button
+                            type="button"
                             variant="outline"
                             size="sm"
+                            disabled={isSavingComment}
                             onClick={() => {
                               setEditingCommentId(null);
                               setEditingCommentDraft("");
+                              setEditCommentError(null);
                             }}
                           >
                             Cancel
                           </Button>
-                          <Button size="sm" onClick={handleSaveEditedComment}>
-                            Save
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={
+                              !editingCommentDraft.trim() || isSavingComment
+                            }
+                            onClick={handleSaveEditedComment}
+                          >
+                            {isSavingComment ? "Saving..." : "Save"}
                           </Button>
                         </div>
                       </div>

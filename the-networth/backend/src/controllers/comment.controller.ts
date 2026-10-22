@@ -48,18 +48,23 @@ export const addComment = async (req: Request, res: Response) => {
 };
 
 export const editComment = async (req: Request, res: Response) => {
-  const { commentId, content } = req.body;
-
-  if (!commentId || typeof content !== "string" || !content) {
-    return res
-      .status(400)
-      .json({ message: "Comment ID and content are required" });
-  }
+  const { commentId } = req.body;
+  const content =
+    typeof req.body?.content === "string" ? req.body.content.trim() : "";
+  const userId = req.user?._id;
 
   if (!mongoose.isValidObjectId(commentId)) {
     return res.status(400).json({
       message: "Invalid comment ID",
     });
+  }
+
+  if (!content) {
+    return res.status(400).json({ message: "Comment content is required" });
+  }
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   const comment = await Comment.findById(commentId);
@@ -69,6 +74,18 @@ export const editComment = async (req: Request, res: Response) => {
       message: "Comment not found",
     });
   }
+
+  if (comment.user.toString() !== userId.toString()) {
+    return res.status(403).json({ message: "Unauthorized" });
+  }
+
+  comment.content = content;
+  await comment.save();
+
+  return res.status(200).json({
+    message: "Comment updated successfully",
+    comment,
+  });
 };
 
 export const deleteComment = async (req: Request, res: Response) => {
