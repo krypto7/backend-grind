@@ -29,6 +29,8 @@ export default function PostDataDetails() {
   const [isSavingComment, setIsSavingComment] = useState(false);
   const [editCommentError, setEditCommentError] = useState<string | null>(null);
 
+  console.log("===", menuRef);
+
   useEffect(() => {
     let ignore = false;
 
@@ -55,19 +57,19 @@ export default function PostDataDetails() {
     };
   }, [id]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpenCommentId(null);
-      }
-    };
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+  //       setOpenCommentId(null);
+  //     }
+  //   };
 
-    document.addEventListener("mousedown", handleClickOutside);
+  //   document.addEventListener("mousedown", handleClickOutside);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, []);
 
   const submitComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -99,9 +101,11 @@ export default function PostDataDetails() {
   };
 
   const handleSaveEditedComment = async () => {
+    console.log("Editing comment ID:", editingCommentId);
     const commentId = editingCommentId;
     const content = editingCommentDraft.trim();
 
+    console.log("=======", editingCommentId);
     if (!commentId || !content || !postData || isSavingComment) return;
 
     setIsSavingComment(true);
@@ -241,6 +245,7 @@ export default function PostDataDetails() {
                       <div className="relative" ref={menuRef}>
                         <button
                           key={comment._id}
+                          type="button"
                           onClick={() =>
                             setOpenCommentId(
                               openCommentId === comment._id
@@ -262,6 +267,7 @@ export default function PostDataDetails() {
                                   <li>
                                     <button
                                       className="w-full rounded-md px-3 py-2 text-left hover:bg-muted"
+                                      type="button"
                                       onClick={() => {
                                         setEditingCommentId(comment._id);
                                         setEditingCommentDraft(comment.content);

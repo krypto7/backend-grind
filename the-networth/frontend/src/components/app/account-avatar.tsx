@@ -8,7 +8,7 @@ export function displayName(user: Pick<AccountUser, "firstname" | "lastname">) {
 }
 
 export function initials(user: Pick<AccountUser, "firstname" | "lastname">) {
-  return `${user.firstname.charAt(0)}${user.lastname.charAt(0)}`.toUpperCase();
+  return `${user.firstname?.charAt(0)}${user.lastname?.charAt(0)}`.toUpperCase();
 }
 
 export function AccountAvatar({

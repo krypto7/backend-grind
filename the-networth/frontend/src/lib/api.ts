@@ -303,14 +303,11 @@ export const addCommentAPI = async (postId: string, content: string) => {
 };
 
 export const editCommentAPI = async (commentId: string, content: string) => {
-  const response = await authFetch(
-    `${baseURL}/comment/edit-comment`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commentId, content }),
-    },
-  );
+  const response = await authFetch(`${baseURL}/comment/edit-comment`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ commentId, content }),
+  });
   const data = await readJson(response);
 
   if (!response.ok) {
