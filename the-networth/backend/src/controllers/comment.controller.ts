@@ -81,6 +81,7 @@ export const editComment = async (req: Request, res: Response) => {
 
   comment.content = content;
   await comment.save();
+  await comment.populate("user", "");
 
   return res.status(200).json({
     message: "Comment updated successfully",

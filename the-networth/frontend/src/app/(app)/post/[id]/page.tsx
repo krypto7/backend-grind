@@ -22,14 +22,13 @@ export default function PostDataDetails() {
   const [commentDraft, setCommentDraft] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentDraft, setEditingCommentDraft] = useState("");
   const [isSavingComment, setIsSavingComment] = useState(false);
   const [editCommentError, setEditCommentError] = useState<string | null>(null);
 
-  console.log("===", menuRef);
+  console.log("====", postData);
 
   useEffect(() => {
     let ignore = false;
@@ -242,7 +241,7 @@ export default function PostDataDetails() {
                           </p>
                         </div>
                       </div>
-                      <div className="relative" ref={menuRef}>
+                      <div className="relative">
                         <button
                           key={comment._id}
                           type="button"

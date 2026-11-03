@@ -36,13 +36,10 @@ const postSchema = new mongoose.Schema(
       type: [mediaSchema],
       default: [],
     },
-    likes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Like",
-        default: null,
-      },
-    ],
+    likesCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -54,6 +51,7 @@ postSchema.virtual("comments", {
   ref: "Comment",
   localField: "_id",
   foreignField: "post",
+  options: { sort: { createdAt: -1 } },
 });
 
 const Post = mongoose.model("Post", postSchema);
