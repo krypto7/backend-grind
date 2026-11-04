@@ -30,7 +30,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRouter);
 app.use("/api/post", postRouter);
 app.use("/api/comment", commentRouter);
-app.use("api/like", likeRouter);
+app.use("/api/like", likeRouter);
 
 app.get("/me", (req, res) => {
   res.status(200).json({

@@ -226,10 +226,12 @@ export type Post = {
   media?: PostMedia[];
   comments?: PostComment[];
   createdAt?: string;
+  likesCount?: number;
+  likedByMe?: boolean;
 };
 
 export const getPostsAPI = async () => {
-  const response = await fetch(`${baseURL}/post/get-posts`);
+  const response = await authFetch(`${baseURL}/post/get-posts`);
   const data = await readJson(response);
 
   if (!response.ok) {
@@ -280,7 +282,7 @@ export const getPostDetailsAPI = async (postId: string) => {
     }
 
     return data as Post;
-  } catch (error) {
+  } catch {
     throw new Error("An error occurred while fetching post details.");
   }
 };
@@ -318,3 +320,32 @@ export const editCommentAPI = async (commentId: string, content: string) => {
     comment: Pick<PostComment, "_id" | "content" | "createdAt">;
   };
 };
+
+export type PostLikeResponse = {
+  liked: boolean;
+  likesCount: number;
+};
+
+const postLikeRequest = async (
+  postId: string,
+  endpoint: "add-likes" | "remove-likes",
+  method: "POST" | "DELETE",
+) => {
+  const response = await authFetch(`${baseURL}/like/${endpoint}/${postId}`, {
+    method,
+  });
+
+  const data = await readJson(response);
+
+  if (!response.ok) {
+    throw new Error(data.msg || data.message || "Unable to update post like.");
+  }
+
+  return data as PostLikeResponse;
+};
+
+export const addPostLikeAPI = (postId: string) =>
+  postLikeRequest(postId, "add-likes", "POST");
+
+export const removePostLikeAPI = (postId: string) =>
+  postLikeRequest(postId, "remove-likes", "DELETE");

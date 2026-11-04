@@ -5,7 +5,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 
 const router = Router();
 
-router.route("/get-posts").get(postController.getPosts);
+router.route("/get-posts").get(verifyJWT, postController.getPosts);
 router
   .route("/create-post")
   .post(verifyJWT, upload.array("media", 5), postController.createPost);

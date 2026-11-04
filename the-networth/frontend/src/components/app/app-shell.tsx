@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
+import { Menu } from "@base-ui/react/menu";
 import {
   CompassIcon,
+  EllipsisIcon,
   HouseIcon,
+  LogOutIcon,
   MessageCircleIcon,
   SquarePenIcon,
   UserRoundIcon,
@@ -13,7 +16,7 @@ import {
 import { AccountAvatar, displayName } from "@/components/app/account-avatar";
 import { Logo } from "@/components/auth/logo";
 import { Spinner } from "@/components/ui/spinner";
-import { loadAccount, type AccountUser } from "@/lib/api";
+import { loadAccount, logoutAPI, type AccountUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type AccountContextValue = {
@@ -51,6 +54,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AccountUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -72,6 +77,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, [router]);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    setLogoutError("");
+
+    try {
+      await logoutAPI();
+      setUser(null);
+      router.replace("/sign-in");
+    } catch (error) {
+      setLogoutError(
+        error instanceof Error ? error.message : "Unable to log out.",
+      );
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <AccountContext.Provider value={{ user, setUser }}>
@@ -132,23 +153,78 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
           {user ? (
-            <Link
-              href="/profile"
-              aria-label="Your profile"
-              className="flex items-center gap-3 rounded-full p-3 transition-colors hover:bg-muted"
+            <div
+              className={cn(
+                "flex min-w-0 items-center gap-0",
+                !messagesOpen && "xl:gap-1",
+              )}
             >
-              <AccountAvatar user={user} className="size-10 shrink-0 text-sm" />
-              <span
-                className={cn("hidden min-w-0", !messagesOpen && "xl:block")}
+              <Link
+                href="/profile"
+                aria-label="Your profile"
+                className={cn(
+                  "flex min-w-0 flex-1 items-center justify-center rounded-full transition-colors hover:bg-muted xl:justify-start",
+                  !messagesOpen && "xl:gap-3 xl:px-3 xl:py-2",
+                )}
               >
-                <span className="block truncate text-sm font-semibold">
-                  {displayName(user)}
+                <AccountAvatar
+                  user={user}
+                  className="size-10 shrink-0 text-sm"
+                />
+                <span
+                  className={cn("hidden min-w-0", !messagesOpen && "xl:block")}
+                >
+                  <span className="block truncate text-sm font-semibold">
+                    {displayName(user)}
+                  </span>
+                  <span className="block truncate text-sm text-muted-foreground">
+                    @{user.username}
+                  </span>
                 </span>
-                <span className="block truncate text-sm text-muted-foreground">
-                  @{user.username}
-                </span>
-              </span>
-            </Link>
+              </Link>
+
+              <Menu.Root
+                onOpenChange={(open) => {
+                  if (open) setLogoutError("");
+                }}
+              >
+                <Menu.Trigger
+                  className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Open account menu"
+                >
+                  <EllipsisIcon className="size-5" aria-hidden="true" />
+                </Menu.Trigger>
+                <Menu.Portal>
+                  <Menu.Positioner
+                    side="top"
+                    align="end"
+                    sideOffset={8}
+                    className="z-50 outline-none"
+                  >
+                    <Menu.Popup className="w-56 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+                      <Menu.Item
+                        disabled={loggingOut}
+                        closeOnClick={false}
+                        onClick={handleLogout}
+                        className="flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-sm outline-none data-highlighted:bg-muted data-disabled:opacity-60"
+                      >
+                        {loggingOut ? (
+                          <Spinner />
+                        ) : (
+                          <LogOutIcon className="size-4" aria-hidden="true" />
+                        )}
+                        {loggingOut ? "Logging out..." : "Log out"}
+                      </Menu.Item>
+                      {logoutError ? (
+                        <p className="px-3 py-2 text-xs text-destructive" role="alert">
+                          {logoutError}
+                        </p>
+                      ) : null}
+                    </Menu.Popup>
+                  </Menu.Positioner>
+                </Menu.Portal>
+              </Menu.Root>
+            </div>
           ) : null}
         </aside>
 

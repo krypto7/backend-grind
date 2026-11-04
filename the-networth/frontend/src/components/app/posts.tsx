@@ -1,3 +1,4 @@
+"use client";
 import { AccountAvatar } from "@/components/app/account-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,8 +8,14 @@ import {
   ShareIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Post, PostMedia } from "@/lib/api";
+import {
+  addPostLikeAPI,
+  Post,
+  PostMedia,
+  removePostLikeAPI,
+} from "@/lib/api";
 import { cn } from "cn";
+import { useState } from "react";
 
 type PostCardProps = {
   post: Post;
@@ -53,6 +60,65 @@ function PostPhotos({ media }: { media?: PostMedia[] }) {
   );
 }
 
+function PostLikeButton({
+  postId,
+  initialLike,
+  likeCounts,
+}: {
+  postId: string;
+  initialLike: boolean;
+  likeCounts: number;
+}) {
+  const [isLike, setIsLike] = useState(initialLike);
+  const [likeCount, setLikeCount] = useState(likeCounts);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleClick = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const result = isLike
+        ? await removePostLikeAPI(postId)
+        : await addPostLikeAPI(postId);
+
+      setIsLike(result.liked);
+      setLikeCount(result.likesCount);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to update like.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Button
+        type="button"
+        variant="ghost"
+        size={"sm"}
+        onClick={handleClick}
+        disabled={isLoading}
+        aria-pressed={isLike}
+        aria-label={isLike ? "Unlike post" : "like post"}
+      >
+        <HeartIcon className={isLike ? "fill-current text-rose-700" : ""} />
+        <span>{likeCount}</span>
+      </Button>
+      {error && (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Posts({ post }: PostCardProps) {
   const router = useRouter();
 
@@ -84,9 +150,12 @@ function Posts({ post }: PostCardProps) {
         </div>
       ) : null}
       <div className="flex gap-2 pt-3">
-        <Button variant="ghost" size="sm">
-          <HeartIcon />
-        </Button>
+        <PostLikeButton
+          key={post._id}
+          postId={post._id}
+          initialLike={post.likedByMe ?? false}
+          likeCounts={post.likesCount ?? 0}
+        />
         <Button
           variant="ghost"
           size="sm"
