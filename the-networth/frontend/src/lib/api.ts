@@ -1,4 +1,4 @@
-const baseURL = "/api";
+const baseURL = "http://localhost:8000/api";
 
 export type AccountUser = {
   _id: string;
@@ -10,6 +10,8 @@ export type AccountUser = {
   isVerified?: boolean;
   createdAt?: string;
 };
+
+export type PublicProfile = Omit<AccountUser, "email">;
 
 export const signinAPI = async (formData: {
   email: string;
@@ -152,6 +154,20 @@ export const getCurrentUser = async () => {
   }
 
   return data as { user: AccountUser };
+};
+
+export const getUserProfileAPI = async (userId: string) => {
+  const response = await authFetch(`${baseURL}/auth/profile/${userId}`);
+  const data = await readJson(response);
+
+  if (!response.ok) {
+    throw new ApiError(
+      data.msg || "Unable to load this profile.",
+      response.status,
+    );
+  }
+
+  return data as { user: PublicProfile };
 };
 
 export function loadAccount() {
@@ -349,3 +365,16 @@ export const addPostLikeAPI = (postId: string) =>
 
 export const removePostLikeAPI = (postId: string) =>
   postLikeRequest(postId, "remove-likes", "DELETE");
+
+export const getPublicProfileApi = async (userId: string) => {
+  const response = await authFetch(`${baseURL}/auth/profile/${userId}`);
+  const data = await readJson(response);
+
+  if (!response.ok) {
+    throw new Error(
+      data.msg || data.message || "Unable to get public profile.",
+    );
+  }
+
+  return data as { user: PublicProfile };
+};

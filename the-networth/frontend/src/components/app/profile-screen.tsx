@@ -37,7 +37,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
 
   useEffect(() => {
     if (!user?._id) return;
-    let active = true;
+    let active = true;    
 
     getUserPostAPI(user._id)
       .then((userPosts) => {

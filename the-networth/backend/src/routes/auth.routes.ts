@@ -11,6 +11,7 @@ router
   .route("/refresh")
   .get(authController.refreshAccessToken);
 router.route("/getCurrentUser").get(verifyJWT, authController.getCurrentUser);
+router.route("/profile/:id").get(authController.getPublicProfile);
 router.route("/logout").get(verifyJWT, authController.logout);
 router
   .route("/edit-profile")

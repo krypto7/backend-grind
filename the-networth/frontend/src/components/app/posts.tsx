@@ -8,12 +8,7 @@ import {
   ShareIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  addPostLikeAPI,
-  Post,
-  PostMedia,
-  removePostLikeAPI,
-} from "@/lib/api";
+import { addPostLikeAPI, Post, PostMedia, removePostLikeAPI } from "@/lib/api";
 import { cn } from "cn";
 import { useState } from "react";
 
@@ -74,6 +69,8 @@ function PostLikeButton({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const navigate = useRouter();
+
   const handleClick = async () => {
     setIsLoading(true);
     setError("");
@@ -120,11 +117,14 @@ function PostLikeButton({
 }
 
 function Posts({ post }: PostCardProps) {
-  const router = useRouter();
+  const navigate = useRouter();
 
   return (
     <div>
-      <div className="flex items-center gap-3 justify-between">
+      <div
+        className="flex items-center gap-3 justify-between"
+        onClick={() => navigate.push(`/profile/${post.user?._id}`)}
+      >
         <div className="flex gap-4">
           <AccountAvatar
             user={post.user}
@@ -159,7 +159,7 @@ function Posts({ post }: PostCardProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(`/post/${post._id}`)}
+          onClick={() => navigate.push(`/post/${post._id}`)}
         >
           <MessageCircleIcon />
           {post.comments?.length}

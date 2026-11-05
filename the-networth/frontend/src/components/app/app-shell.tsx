@@ -37,7 +37,7 @@ const links = [
   { href: "/home", label: "Home", icon: HouseIcon },
   { href: "/explore", label: "Explore", icon: CompassIcon },
   { href: "/message", label: "Message", icon: MessageCircleIcon },
-  { href: "/profile", label: "Profile", icon: UserRoundIcon },
+  { href: `/profile/id`, label: "Profile", icon: UserRoundIcon },
 ];
 
 const topics = ["Design", "Notes", "Cities", "Work"];
@@ -160,7 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <Link
-                href="/profile"
+                href={`/profile/${user._id}`}
                 aria-label="Your profile"
                 className={cn(
                   "flex min-w-0 flex-1 items-center justify-center rounded-full transition-colors hover:bg-muted xl:justify-start",
@@ -216,7 +216,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         {loggingOut ? "Logging out..." : "Log out"}
                       </Menu.Item>
                       {logoutError ? (
-                        <p className="px-3 py-2 text-xs text-destructive" role="alert">
+                        <p
+                          className="px-3 py-2 text-xs text-destructive"
+                          role="alert"
+                        >
                           {logoutError}
                         </p>
                       ) : null}

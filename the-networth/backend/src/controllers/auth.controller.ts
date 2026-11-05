@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import type { Request, Response } from "express";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { verifyEmail as sendVerifyEmail } from "../services/verifyEmail.js";
 import { otpGenerate } from "../lib/otpGenerate.js";
@@ -506,7 +507,9 @@ export const editProfile = async (req: Request, res: Response) => {
     const userId = req.user?._id;
     const firstname = String(req.body.firstname ?? "").trim();
     const lastname = String(req.body.lastname ?? "").trim();
-    const username = String(req.body.username ?? "").trim().toLowerCase();
+    const username = String(req.body.username ?? "")
+      .trim()
+      .toLowerCase();
     const email = normalizeEmail(req.body.email);
 
     if (!userId || !firstname || !lastname || !username || !email) {
@@ -524,7 +527,10 @@ export const editProfile = async (req: Request, res: Response) => {
       });
     }
 
-    const usernameTaken = await User.findOne({ username, _id: { $ne: userId } });
+    const usernameTaken = await User.findOne({
+      username,
+      _id: { $ne: userId },
+    });
     if (usernameTaken) {
       return res.status(409).json({
         status: "false",
@@ -572,4 +578,22 @@ export const editProfile = async (req: Request, res: Response) => {
       msg: "Internal server error",
     });
   }
+};
+
+export const getPublicProfile = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  if (!id || !mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ msg: "Invalid user ID" });
+  }
+
+  const user = await User.findById(id).select(
+    "_id firstname lastname username avtar isVerified posts createdAt",
+  );
+
+  if (!user) {
+    return res.status(404).json({ msg: "User not found" });
+  }
+
+  return res.status(200).json({ user });
 };
