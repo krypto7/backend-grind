@@ -13,7 +13,12 @@ import { AccountAvatar, displayName } from "@/components/app/account-avatar";
 import { EditProfileDialog } from "@/components/app/edit-profile-dialog";
 import { useAccount } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
-import { getUserPostAPI, type Post } from "@/lib/api";
+import {
+  getUserPostAPI,
+  getUserProfileAPI,
+  type Post,
+  type PublicProfile,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Posts from "./posts";
 
@@ -25,26 +30,64 @@ interface ProfileScreenProps {
 
 export function ProfileScreen({ userId }: ProfileScreenProps) {
   const { user, setUser } = useAccount();
-
-  console.log("userId====", userId);
-
+  const currentUserId = user?._id;
+  const isOwnProfile = userId === currentUserId;
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [error, setError] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [postsError, setPostsError] = useState("");
+  const [publicProfileUser, setPublicProfileUser] =
+    useState<PublicProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoaded, setPostsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
 
   useEffect(() => {
-    if (!user?._id) return;
-    let active = true;    
+    if (!currentUserId || !userId) return;
 
-    getUserPostAPI(user._id)
+    let active = true;
+    setProfileError("");
+    setPostsError("");
+    setPublicProfileUser(null);
+    setPosts([]);
+    setPostsLoaded(false);
+    setActiveTab("posts");
+
+    if (currentUserId === userId) {
+      setProfileLoaded(true);
+    } else {
+      setProfileLoaded(false);
+      getUserProfileAPI(userId)
+        .then(({ user: profile }) => {
+          if (active) setPublicProfileUser(profile);
+        })
+        .catch((requestError) => {
+          if (active) {
+            setProfileError(
+              requestError instanceof Error
+                ? requestError.message
+                : "Unable to load this profile.",
+            );
+          }
+        })
+        .finally(() => {
+          if (active) setProfileLoaded(true);
+        });
+    }
+
+    getUserPostAPI(userId)
       .then((userPosts) => {
         if (active) setPosts(userPosts);
       })
-      .catch(() => {
-        if (active) setError("Unable to load your posts.");
+      .catch((requestError) => {
+        if (active) {
+          setPostsError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load posts for this profile.",
+          );
+        }
       })
       .finally(() => {
         if (active) setPostsLoaded(true);
@@ -53,31 +96,51 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
     return () => {
       active = false;
     };
-  }, [user?._id]);
+  }, [currentUserId, userId]);
+
+  console.log("=======>", publicProfileUser);
 
   if (!user) return null;
 
-  const name = displayName(user);
+  const profileUser = isOwnProfile ? user : publicProfileUser;
+  if (!profileUser) {
+    return (
+      <div className="flex min-h-56 items-center justify-center">
+        <p
+          className="text-sm text-muted-foreground"
+          role={profileLoaded ? "alert" : "status"}
+        >
+          {profileLoaded
+            ? profileError || "This profile could not be found."
+            : "Loading profile..."}
+        </p>
+      </div>
+    );
+  }
+
+  const name = displayName(profileUser);
   const profileStats = [
     { label: "Posts", value: postsLoaded ? String(posts.length) : "—" },
     { label: "Followers", value: "—" },
     { label: "Following", value: "—" },
   ];
-  const profileTabs: { id: ProfileTab; label: string }[] = [
-    { id: "posts", label: "Posts" },
-    { id: "liked", label: "Liked posts" },
-    { id: "saved", label: "Saved posts" },
-  ];
+  const profileTabs: { id: ProfileTab; label: string }[] = isOwnProfile
+    ? [
+        { id: "posts", label: "Posts" },
+        { id: "liked", label: "Liked posts" },
+        { id: "saved", label: "Saved posts" },
+      ]
+    : [{ id: "posts", label: "Posts" }];
   const EmptyTabIcon = activeTab === "liked" ? HeartIcon : BookmarkIcon;
 
   return (
     <div className="space-y-6">
       <header>
         <p className="text-xs font-semibold tracking-[0.22em] text-primary uppercase">
-          Your space
+          {isOwnProfile ? "Your space" : "Community profile"}
         </p>
         <h1 className="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
-          Profile
+          {isOwnProfile ? "Your profile" : `@${profileUser.username}`}
         </h1>
       </header>
 
@@ -93,20 +156,22 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         <div className="px-5 pb-5 sm:px-8 sm:pb-7">
           <div className="-mt-11 flex flex-wrap items-end justify-between gap-3 relative z-10">
             <AccountAvatar
-              user={user}
+              user={profileUser}
               className="size-22 text-2xl ring-4 ring-card sm:size-24"
             />
-            <div className="flex items-center gap-2 pb-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setEditing(true)}
-              >
-                <PencilIcon aria-hidden="true" />
-                Edit profile
-              </Button>
-            </div>
+            {isOwnProfile ? (
+              <div className="flex items-center gap-2 pb-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                >
+                  <PencilIcon aria-hidden="true" />
+                  Edit profile
+                </Button>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
@@ -115,29 +180,35 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
                 {name}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                @{user.username}
+                @{profileUser.username}
               </p>
-              <p className="mt-3 break-all text-sm text-muted-foreground">
-                {user.email}
-              </p>
+              {isOwnProfile && "email" in profileUser ? (
+                <p className="mt-3 break-all text-sm text-muted-foreground">
+                  {profileUser.email}
+                </p>
+              ) : null}
             </div>
             <span
               className={cn(
                 "mt-1 rounded-full px-3 py-1 text-xs font-medium",
-                user.isVerified === false
+                profileUser.isVerified === false
                   ? "bg-muted text-muted-foreground"
                   : "bg-primary/10 text-primary",
               )}
             >
-              {user.isVerified === false ? (
-                "Email unverified"
+              {profileUser.isVerified === false ? (
+                isOwnProfile ? (
+                  "Email unverified"
+                ) : (
+                  "Unverified account"
+                )
               ) : (
                 <span className="inline-flex items-center gap-1.5">
                   <BadgeCheckIcon
                     className="size-4 fill-sky-500 text-white"
                     aria-hidden="true"
                   />
-                  Email verified
+                  {isOwnProfile ? "Email verified" : "Verified account"}
                 </span>
               )}
             </span>
@@ -155,12 +226,6 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
               </div>
             ))}
           </dl>
-
-          {error ? (
-            <p className="mt-4 text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
         </div>
       </section>
 
@@ -168,7 +233,10 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         <div
           role="tablist"
           aria-label="Profile posts"
-          className="grid grid-cols-3 border-b border-border px-2 sm:px-5"
+          className={cn(
+            "grid border-b border-border px-2 sm:px-5",
+            isOwnProfile ? "grid-cols-3" : "grid-cols-1",
+          )}
         >
           {profileTabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -211,6 +279,11 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
           aria-labelledby={`${activeTab}-tab`}
           className="p-4 sm:p-5"
         >
+          {postsError ? (
+            <p className="mb-4 text-sm text-destructive" role="alert">
+              {postsError}
+            </p>
+          ) : null}
           {activeTab === "posts" ? (
             !postsLoaded ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
@@ -224,7 +297,9 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
                 />
                 <h3 className="mt-3 font-medium">No posts yet</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Your posts will show up here.
+                  {isOwnProfile
+                    ? "Your posts will show up here."
+                    : "This user has not shared a post yet."}
                 </p>
               </div>
             ) : (
@@ -267,12 +342,14 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
         </div>
       </section>
 
-      <EditProfileDialog
-        user={user}
-        open={editing}
-        onOpenChange={setEditing}
-        onSaved={setUser}
-      />
+      {isOwnProfile ? (
+        <EditProfileDialog
+          user={user}
+          open={editing}
+          onOpenChange={setEditing}
+          onSaved={setUser}
+        />
+      ) : null}
     </div>
   );
 }

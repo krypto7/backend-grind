@@ -7,6 +7,7 @@ import {
   MessageCircleIcon,
   ShareIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addPostLikeAPI, Post, PostMedia, removePostLikeAPI } from "@/lib/api";
 import { cn } from "cn";
@@ -121,27 +122,36 @@ function Posts({ post }: PostCardProps) {
 
   return (
     <div>
-      <div
-        className="flex items-center gap-3 justify-between"
-        onClick={() => navigate.push(`/profile/${post.user?._id}`)}
-      >
-        <div className="flex gap-4">
-          <AccountAvatar
-            user={post.user}
-            className="size-10 shrink-0 text-sm"
-          />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">
-              @{post.user?.username}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {post.createdAt ? new Date(post.createdAt).toLocaleString() : ""}
-            </p>
-          </div>
-        </div>
-        <div>
+      <div className="flex items-center justify-between gap-3">
+        {post.user ? (
+          <Link
+            href={`/profile/${post.user._id}`}
+            aria-label={`View @${post.user.username}'s profile`}
+            className="flex min-w-0 flex-1 items-center gap-4 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <AccountAvatar
+              user={post.user}
+              className="size-10 shrink-0 text-sm"
+            />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">
+                @{post.user.username}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {post.createdAt
+                  ? new Date(post.createdAt).toLocaleString()
+                  : ""}
+              </span>
+            </span>
+          </Link>
+        ) : (
+          <span className="flex min-w-0 flex-1 items-center text-sm text-muted-foreground">
+            Account unavailable
+          </span>
+        )}
+        <span aria-hidden="true">
           <Ellipsis />
-        </div>
+        </span>
       </div>
       <p className="mt-3 text-sm leading-6">{post.content}</p>
       {post.media?.some((item) => item.mediaUrl) ? (

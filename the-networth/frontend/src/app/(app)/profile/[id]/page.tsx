@@ -13,5 +13,5 @@ interface profileProps {
 
 export default async function ProfilePage({ params }: profileProps) {
   const { id } = await params;
-  return <ProfileScreen userId={id} />;
+  return <ProfileScreen key={id} userId={id} />;
 }

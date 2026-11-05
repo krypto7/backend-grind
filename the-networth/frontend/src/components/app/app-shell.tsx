@@ -37,7 +37,6 @@ const links = [
   { href: "/home", label: "Home", icon: HouseIcon },
   { href: "/explore", label: "Explore", icon: CompassIcon },
   { href: "/message", label: "Message", icon: MessageCircleIcon },
-  { href: `/profile/id`, label: "Profile", icon: UserRoundIcon },
 ];
 
 const topics = ["Design", "Notes", "Cities", "Work"];
@@ -94,6 +93,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const navigationLinks = user
+    ? [
+        ...links,
+        {
+          href: `/profile/${user._id}`,
+          label: "Profile",
+          icon: UserRoundIcon,
+        },
+      ]
+    : links;
+
   return (
     <AccountContext.Provider value={{ user, setUser }}>
       <div className="mx-auto flex min-h-svh w-full max-w-[1280px]">
@@ -110,8 +120,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
             </div>
             <nav className="mt-1 flex flex-col">
-              {links.map((link) => {
-                const active = pathname === link.href;
+              {navigationLinks.map((link) => {
+                const active =
+                  link.label === "Profile"
+                    ? pathname.startsWith("/profile/")
+                    : pathname === link.href;
                 const Icon = link.icon;
                 return (
                   <Link
@@ -295,8 +308,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-background md:hidden">
-          {links.map((link) => {
-            const active = pathname === link.href;
+          {navigationLinks.map((link) => {
+            const active =
+              link.label === "Profile"
+                ? pathname.startsWith("/profile/")
+                : pathname === link.href;
             const Icon = link.icon;
             return (
               <Link

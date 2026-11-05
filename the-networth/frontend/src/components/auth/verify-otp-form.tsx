@@ -67,8 +67,8 @@ export function VerifyOtpForm({
     setError("");
 
     try {
-      await verifyOTP(email, otp);
-      router.push("/profile");
+      const data = await verifyOTP(email, otp);
+      router.push(data.user?._id ? `/profile/${data.user._id}` : "/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to verify OTP.");
       setSubmitting(false);

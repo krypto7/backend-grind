@@ -238,7 +238,7 @@ export type PostComment = {
 export type Post = {
   _id: string;
   content: string;
-  user: PostAuthor;
+  user: PostAuthor | null;
   media?: PostMedia[];
   comments?: PostComment[];
   createdAt?: string;

@@ -15,7 +15,7 @@ export function AccountAvatar({
   user,
   className,
 }: {
-  user: AccountUser;
+  user: Pick<AccountUser, "firstname" | "lastname" | "avtar">;
   className?: string;
 }) {
   if (user.avtar) {
