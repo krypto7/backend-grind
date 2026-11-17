@@ -119,6 +119,7 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
   }
 
   const name = displayName(profileUser);
+  const profileEmail = isOwnProfile ? (user?.email ?? null) : null;
   const profileStats = [
     { label: "Posts", value: postsLoaded ? String(posts.length) : "—" },
     { label: "Followers", value: "—" },
@@ -182,11 +183,20 @@ export function ProfileScreen({ userId }: ProfileScreenProps) {
               <p className="mt-1 text-sm text-muted-foreground">
                 @{profileUser.username}
               </p>
-              {isOwnProfile && "email" in profileUser ? (
+              {profileEmail ? (
                 <p className="mt-3 break-all text-sm text-muted-foreground">
-                  {profileUser.email}
+                  {profileEmail}
                 </p>
-              ) : null}
+              ) : (
+                <div>
+                  <button
+                    className="px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+                    onClick={() => console.log("Follow button clicked")}
+                  >
+                    Follow
+                  </button>
+                </div>
+              )}
             </div>
             <span
               className={cn(

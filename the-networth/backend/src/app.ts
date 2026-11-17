@@ -5,6 +5,7 @@ import cors from "cors";
 import postRouter from "./routes/post.routes.js";
 import commentRouter from "./routes/comments.routes.js";
 import likeRouter from "./routes/like.routes.js";
+import followRouter from "./routes/follow.route.js";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/post", postRouter);
 app.use("/api/comment", commentRouter);
 app.use("/api/like", likeRouter);
+app.use("/api/follow", followRouter);
 
 app.get("/me", (req, res) => {
   res.status(200).json({
