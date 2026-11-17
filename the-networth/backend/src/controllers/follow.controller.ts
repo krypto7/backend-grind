@@ -131,5 +131,42 @@ export const getFollowers = async (req: Request, res: Response) => {
       limit,
       totalPages: Math.ceil(total / limit),
     },
-  });         
+  });
+};
+
+export const getFollowing = async (req: Request, res: Response) => {
+  const userId = req.params.id;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({
+      message: "Invalid user ID",
+    });
+  }
+
+  const page = Math.max(1, Number(req.query.page) || 1);
+
+  const limit = Math.max(1, Number(req.query.limit) || 10);
+
+  const skip = (page - 1) * limit;
+
+  const [following, total] = await Promise.all([
+    Follow.find({ following: userId })
+      .populate("following", "username firstname lastname avatar")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+
+    Follow.countDocuments({ following: userId }),
+  ]);
+
+  return res.status(200).json({
+    message: "following fetched successfully",
+    following,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 };
